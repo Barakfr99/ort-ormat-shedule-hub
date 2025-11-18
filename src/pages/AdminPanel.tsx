@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Save, Users, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowRight, Save, Calendar as CalendarIcon } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,8 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Label } from '@/components/ui/label';
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { formatDate, formatDateForDB } from '@/lib/excelParser';
 import { supabase } from '@/integrations/supabase/client';
@@ -283,149 +284,202 @@ export default function AdminPanel() {
             </Card>
 
             <Card className="p-6 card-elevated">
-              <h3 className="text-xl font-bold mb-4 text-foreground">עריכת מערכת לפי יום</h3>
+              <h3 className="text-xl font-bold mb-4 text-foreground">בחר סוג עריכה</h3>
               
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2 text-foreground">תאריך לעריכה</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-right">
-                      <CalendarIcon className="ml-2 h-4 w-4" />
-                      {formatDate(editDate)}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={editDate}
-                      onSelect={(date) => date && setEditDate(date)}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
-
-              <div className="space-y-3 mb-4">
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((hour) => (
-                  <div key={hour}>
-                    <label className="block text-sm font-medium mb-1 text-foreground">
-                      שעה {hour}
-                    </label>
-                    <Input
-                      value={hourContents[hour] || ''}
-                      onChange={(e) =>
-                        setHourContents((prev) => ({ ...prev, [hour]: e.target.value }))
-                      }
-                      placeholder="תוכן השעה"
-                    />
-                  </div>
-                ))}
-              </div>
-
-              <Button
-                onClick={() => saveChangesMutation.mutate()}
-                disabled={selectedStudents.length === 0 || saveChangesMutation.isPending}
-                className="w-full gradient-primary"
-              >
-                <Save className="ml-2 h-4 w-4" />
-                שמור שינויים
-              </Button>
+              <RadioGroup value={editMode} onValueChange={(value: 'daily' | 'range') => setEditMode(value)}>
+                <div className="flex items-center space-x-2 space-x-reverse mb-2">
+                  <RadioGroupItem value="daily" id="daily" />
+                  <Label htmlFor="daily" className="cursor-pointer">עריכת מערכת לפי יום</Label>
+                </div>
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <RadioGroupItem value="range" id="range" />
+                  <Label htmlFor="range" className="cursor-pointer">עדכון טווח שעות</Label>
+                </div>
+              </RadioGroup>
             </Card>
 
-            <Card className="p-6 card-elevated">
-              <h3 className="text-xl font-bold mb-4 text-foreground">עדכון טווח שעות</h3>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-foreground">
-                    טקסט לשעות
-                  </label>
-                  <Input
-                    value={rangeText}
-                    onChange={(e) => setRangeText(e.target.value)}
-                    placeholder="הכנס טקסט"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-2 text-foreground">תאריכים</label>
+            {editMode === 'daily' && (
+              <Card className="p-6 card-elevated">
+                <h3 className="text-xl font-bold mb-4 text-foreground">עריכת מערכת לפי יום</h3>
+                
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2 text-foreground">תאריך לעריכה</label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start text-right">
                         <CalendarIcon className="ml-2 h-4 w-4" />
-                        {rangeDates.length === 1 
-                          ? formatDate(rangeDates[0])
-                          : `${rangeDates.length} ימים נבחרו`
-                        }
+                        {formatDate(editDate)}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <Calendar
-                        mode="multiple"
-                        selected={rangeDates}
-                        onSelect={(dates) => dates && setRangeDates(dates)}
+                        mode="single"
+                        selected={editDate}
+                        onSelect={(date) => date && setEditDate(date)}
                         className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
 
+                <div className="space-y-3">
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((hour) => (
+                    <div key={hour}>
+                      <label className="block text-sm font-medium mb-1 text-foreground">
+                        שעה {hour}
+                      </label>
+                      <Input
+                        value={hourContents[hour] || ''}
+                        onChange={(e) =>
+                          setHourContents((prev) => ({ ...prev, [hour]: e.target.value }))
+                        }
+                        placeholder="תוכן השעה"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {editMode === 'range' && (
+              <Card className="p-6 card-elevated">
+                <h3 className="text-xl font-bold mb-4 text-foreground">עדכון טווח שעות</h3>
+                
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">
+                      טקסט לשעות
+                    </label>
+                    <Input
+                      value={rangeText}
+                      onChange={(e) => setRangeText(e.target.value)}
+                      placeholder="הכנס טקסט"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">תאריכים</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-right">
+                          <CalendarIcon className="ml-2 h-4 w-4" />
+                          {rangeDates.length === 1 
+                            ? formatDate(rangeDates[0])
+                            : `${rangeDates.length} ימים נבחרו`
+                          }
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="multiple"
+                          selected={rangeDates}
+                          onSelect={(dates) => dates && setRangeDates(dates)}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={isFullDay}
+                      onCheckedChange={(checked) => setIsFullDay(checked === true)}
+                      id="full-day"
+                    />
+                    <label htmlFor="full-day" className="text-sm font-medium text-foreground cursor-pointer">
+                      יום מלא (כל 8 השעות)
+                    </label>
+                  </div>
+
+                  {!isFullDay && (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-foreground">
+                          מ-שעה
+                        </label>
+                        <Select value={rangeStart} onValueChange={setRangeStart}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
+                              <SelectItem key={h} value={h.toString()}>
+                                {h}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-foreground">
+                          עד-שעה
+                        </label>
+                        <Select value={rangeEnd} onValueChange={setRangeEnd}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
+                              <SelectItem key={h} value={h.toString()}>
+                                {h}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+            )}
+
+            <Card className="p-6 card-elevated">
+              <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Checkbox
-                    checked={isFullDay}
-                    onCheckedChange={(checked) => setIsFullDay(checked === true)}
-                    id="full-day"
+                    checked={shouldSetResetDate}
+                    onCheckedChange={(checked) => setShouldSetResetDate(checked === true)}
+                    id="set-reset-date"
                   />
-                  <label htmlFor="full-day" className="text-sm font-medium text-foreground cursor-pointer">
-                    יום מלא (כל 8 השעות)
+                  <label htmlFor="set-reset-date" className="text-sm font-medium text-foreground cursor-pointer">
+                    הגדר תאריך איפוס (המערכת תחזור אוטומטית למערכת בסיס אחרי תאריך זה)
                   </label>
                 </div>
 
-                {!isFullDay && (
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-foreground">
-                        מ-שעה
-                      </label>
-                      <Select value={rangeStart} onValueChange={setRangeStart}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
-                            <SelectItem key={h} value={h.toString()}>
-                              {h}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-foreground">
-                        עד-שעה
-                      </label>
-                      <Select value={rangeEnd} onValueChange={setRangeEnd}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
-                            <SelectItem key={h} value={h.toString()}>
-                              {h}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                {shouldSetResetDate && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">תאריך איפוס</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-right">
+                          <CalendarIcon className="ml-2 h-4 w-4" />
+                          {formatDate(resetDate)}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={resetDate}
+                          onSelect={(date) => date && setResetDate(date)}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 )}
 
                 <Button
                   onClick={() => saveChangesMutation.mutate()}
-                  disabled={selectedStudents.length === 0 || !rangeText || rangeDates.length === 0 || saveChangesMutation.isPending}
+                  disabled={
+                    selectedStudents.length === 0 || 
+                    (editMode === 'range' && (!rangeText || rangeDates.length === 0)) ||
+                    saveChangesMutation.isPending
+                  }
                   className="w-full gradient-primary"
                 >
-                  החל על השעות
+                  <Save className="ml-2 h-4 w-4" />
+                  שמור שינויים
                 </Button>
               </div>
             </Card>
@@ -433,33 +487,13 @@ export default function AdminPanel() {
             <Card className="p-6 card-elevated">
               <h3 className="text-xl font-bold mb-4 text-foreground">איפוס למערכת בסיס</h3>
               <p className="text-muted-foreground mb-6">
-                קבע תאריך איפוס. עד ליום זה (כולל) ישמרו השינויים שביצעת. מהיום שאחריו המערכת תחזור
-                אוטומטית למערכת הבסיס מהאקסל.
+                מחיקת כל השינויים והחזרה למערכת הבסיס מהאקסל עבור התלמידים הנבחרים.
               </p>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium mb-2 text-foreground">תאריך איפוס</label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-right">
-                      <CalendarIcon className="ml-2 h-4 w-4" />
-                      {formatDate(resetDate)}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={resetDate}
-                      onSelect={(date) => date && setResetDate(date)}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
 
               {selectedStudents.length > 0 && (
                 <div className="mb-4 p-4 bg-muted rounded-lg">
                   <p className="text-sm text-foreground">
-                    נבחרו {selectedStudents.length} תלמידים מהכיתה {selectedClass}
+                    נבחרו {selectedStudents.length} תלמידים
                   </p>
                 </div>
               )}
@@ -468,14 +502,15 @@ export default function AdminPanel() {
                 onClick={() => resetToBaseMutation.mutate()}
                 disabled={selectedStudents.length === 0 || resetToBaseMutation.isPending}
                 variant="destructive"
+                className="w-full"
               >
-              איפוס למערכת בסיס
-            </Button>
-          </Card>
-        </div>
-      </main>
+                איפוס למערכת בסיס
+              </Button>
+            </Card>
+          </div>
+        </main>
 
-      <Footer />
-    </div>
-  );
-}
+        <Footer />
+      </div>
+    );
+  }
