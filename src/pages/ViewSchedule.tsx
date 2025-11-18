@@ -146,12 +146,13 @@ export default function ViewSchedule() {
 
           <div className="flex items-center justify-between gap-4">
             <Button
-              variant="ghost"
+              variant="default"
               size="lg"
-              onClick={() => changeDate(1)}
-              className="transition-transform hover:scale-110 hover:bg-primary/10"
+              onClick={() => changeDate(-1)}
+              className="flex items-center gap-2 transition-transform hover:scale-105"
             >
-              <ChevronLeft className="h-6 w-6" />
+              <ChevronRight className="h-5 w-5" />
+              <span>היום הקודם</span>
             </Button>
 
             <div className="text-center flex-1">
@@ -162,12 +163,13 @@ export default function ViewSchedule() {
             </div>
 
             <Button
-              variant="ghost"
+              variant="default"
               size="lg"
-              onClick={() => changeDate(-1)}
-              className="transition-transform hover:scale-110 hover:bg-primary/10"
+              onClick={() => changeDate(1)}
+              className="flex items-center gap-2 transition-transform hover:scale-105"
             >
-              <ChevronRight className="h-6 w-6" />
+              <span>היום הבא</span>
+              <ChevronLeft className="h-5 w-5" />
             </Button>
           </div>
         </div>
