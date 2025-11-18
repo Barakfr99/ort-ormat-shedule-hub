@@ -133,43 +133,44 @@ export default function ViewSchedule() {
     <div className="min-h-screen flex flex-col bg-background">
       <Header title={`מערכת שעות של ${studentName}`} />
 
-      <main className="flex-1 container mx-auto px-4 py-6 max-w-4xl">
-        <div className="mb-6 space-y-4">
+      <main className="flex-1 container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-4xl">
+        <div className="mb-3 sm:mb-6 space-y-2 sm:space-y-4">
           <Button 
             variant="outline" 
             onClick={() => navigate('/')}
-            className="w-full sm:w-auto"
+            className="w-full sm:w-auto text-sm"
+            size="sm"
           >
             <ArrowRight className="ml-2 h-4 w-4" />
             חזור לבחירה
           </Button>
 
-          <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center justify-between gap-2">
             <Button
               variant="default"
-              size="lg"
+              size="sm"
               onClick={() => changeDate(-1)}
-              className="flex items-center gap-2 transition-transform hover:scale-105"
+              className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-4"
             >
-              <ChevronRight className="h-5 w-5" />
-              <span>היום הקודם</span>
+              <ChevronRight className="h-4 w-4" />
+              <span className="hidden sm:inline">היום הקודם</span>
             </Button>
 
             <div className="text-center flex-1">
-              <p className="text-3xl font-bold text-primary">
+              <p className="text-lg sm:text-3xl font-bold text-primary">
                 {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][currentDate.getDay()]}
               </p>
-              <p className="text-lg text-muted-foreground mt-1">{formatDate(currentDate)}</p>
+              <p className="text-xs sm:text-lg text-muted-foreground mt-0.5 sm:mt-1">{formatDate(currentDate)}</p>
             </div>
 
             <Button
               variant="default"
-              size="lg"
+              size="sm"
               onClick={() => changeDate(1)}
-              className="flex items-center gap-2 transition-transform hover:scale-105"
+              className="flex items-center gap-1 text-xs sm:text-sm px-2 sm:px-4"
             >
-              <span>היום הבא</span>
-              <ChevronLeft className="h-5 w-5" />
+              <span className="hidden sm:inline">היום הבא</span>
+              <ChevronLeft className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -185,16 +186,17 @@ export default function ViewSchedule() {
         ) : (
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
+              <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b-2 border-border">
-                    <th className="p-4 text-center font-bold text-foreground bg-blue-100 dark:bg-blue-950 border-l border-border w-32">
-                      שעה
+                    <th className="p-1.5 sm:p-3 text-center font-bold text-foreground bg-blue-100 dark:bg-blue-950 border-l border-border w-16 sm:w-24">
+                      <div className="text-xs sm:text-sm">שעה</div>
                     </th>
-                    <th className="p-4 text-center font-bold text-foreground bg-blue-100 dark:bg-blue-950">
-                      {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][currentDate.getDay()]}
-                      <br />
-                      <span className="text-sm text-primary font-normal">{formatDate(currentDate)}</span>
+                    <th className="p-1.5 sm:p-3 text-center font-bold text-foreground bg-blue-100 dark:bg-blue-950">
+                      <div className="text-sm sm:text-base">
+                        {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][currentDate.getDay()]}
+                      </div>
+                      <span className="text-xs sm:text-sm text-primary font-normal hidden sm:inline">{formatDate(currentDate)}</span>
                     </th>
                   </tr>
                 </thead>
@@ -209,31 +211,31 @@ export default function ViewSchedule() {
                         key={hour}
                         className="border-b border-border transition-colors hover:bg-muted/30"
                       >
-                        <td className="p-4 border-l border-border bg-blue-100 dark:bg-blue-950">
+                        <td className="p-1.5 sm:p-3 border-l border-border bg-blue-100 dark:bg-blue-950">
                           <div className="text-center">
-                            <div className="font-bold text-lg text-foreground">{label}</div>
-                            <div className="text-xs text-muted-foreground mt-1">{time}</div>
+                            <div className="font-bold text-xs sm:text-base text-foreground">{hour}</div>
+                            <div className="text-[10px] sm:text-xs text-muted-foreground mt-0.5">{time}</div>
                           </div>
                         </td>
-                        <td className={`p-4 min-h-[100px] ${
+                        <td className={`p-2 sm:p-3 ${
                           isEmpty 
                             ? 'bg-white dark:bg-background' 
                             : 'bg-amber-50 dark:bg-amber-950/30'
                         }`}>
                           {isEmpty || !parsedContent ? (
-                            <div className="text-center text-muted-foreground italic py-4">חלון</div>
+                            <div className="text-center text-muted-foreground italic py-1 sm:py-2 text-xs sm:text-sm">חלון</div>
                           ) : (
-                            <div className="space-y-1 py-2">
-                              <div className="font-semibold text-base text-foreground">
+                            <div className="space-y-0.5 sm:space-y-1 py-1 sm:py-2">
+                              <div className="font-semibold text-xs sm:text-sm text-foreground leading-tight">
                                 {parsedContent.subject}
                               </div>
                               {parsedContent.teacher && (
-                                <div className="text-sm text-muted-foreground">
+                                <div className="text-[10px] sm:text-xs text-muted-foreground leading-tight">
                                   {parsedContent.teacher}
                                 </div>
                               )}
                               {parsedContent.room && (
-                                <div className="text-sm text-primary">
+                                <div className="text-[10px] sm:text-xs text-primary leading-tight">
                                   כיתת לימוד: {parsedContent.room}
                                 </div>
                               )}
