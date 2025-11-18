@@ -26,6 +26,8 @@ export default function AdminPanel() {
   const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
+  
+  const [editMode, setEditMode] = useState<'daily' | 'range'>('daily');
   const [editDate, setEditDate] = useState<Date>(new Date());
   const [hourContents, setHourContents] = useState<{ [key: number]: string }>({});
   
@@ -34,6 +36,7 @@ export default function AdminPanel() {
   const [rangeEnd, setRangeEnd] = useState('8');
   const [rangeDate, setRangeDate] = useState<Date>(new Date());
   
+  const [shouldSetResetDate, setShouldSetResetDate] = useState(false);
   const [resetDate, setResetDate] = useState<Date>(new Date());
 
   useEffect(() => {
@@ -76,116 +79,119 @@ export default function AdminPanel() {
     setSelectedStudents(filteredStudents.map((s) => s.name));
   };
 
-  const saveScheduleMutation = useMutation({
+  const saveChangesMutation = useMutation({
     mutationFn: async () => {
       const updates = [];
-      for (const studentName of selectedStudents) {
-        for (let hour = 1; hour <= 8; hour++) {
-          const content = hourContents[hour];
-          if (content !== undefined && content.trim() !== '') {
+      
+      if (editMode === 'daily') {
+        // Daily schedule editing
+        for (const studentName of selectedStudents) {
+          for (let hour = 1; hour <= 8; hour++) {
+            const content = hourContents[hour];
+            if (content !== undefined && content.trim() !== '') {
+              updates.push({
+                student_id: studentName,
+                date: formatDateForDB(editDate),
+                hour_number: hour,
+                override_text: content,
+              });
+            }
+          }
+        }
+      } else {
+        // Range update
+        const start = parseInt(rangeStart);
+        const end = parseInt(rangeEnd);
+        
+        if (isNaN(start) || isNaN(end) || start < 1 || end > 8 || start > end) {
+          throw new Error('טווח שעות לא תקין');
+        }
+
+        for (const studentName of selectedStudents) {
+          for (let hour = start; hour <= end; hour++) {
             updates.push({
               student_id: studentName,
-              date: formatDateForDB(editDate),
+              date: formatDateForDB(rangeDate),
               hour_number: hour,
-              override_text: content,
+              override_text: rangeText,
             });
           }
         }
       }
 
-      if (updates.length === 0) return;
-
-      const { error } = await supabase
-        .from('schedule_overrides')
-        .upsert(updates, {
-          onConflict: 'student_id,date,hour_number',
-        });
-
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({
-        title: 'המערכת עודכנה בהצלחה',
-      });
-      queryClient.invalidateQueries({ queryKey: ['overrides'] });
-      setHourContents({});
-    },
-    onError: () => {
-      toast({
-        title: 'שגיאה בעדכון המערכת',
-        variant: 'destructive',
-      });
-    },
-  });
-
-  const applyRangeMutation = useMutation({
-    mutationFn: async () => {
-      const start = parseInt(rangeStart);
-      const end = parseInt(rangeEnd);
-      
-      if (isNaN(start) || isNaN(end) || start < 1 || end > 8 || start > end) {
-        throw new Error('טווח שעות לא תקין');
-      }
-
-      const updates = [];
-      for (const studentName of selectedStudents) {
-        for (let hour = start; hour <= end; hour++) {
-          updates.push({
-            student_id: studentName,
-            date: formatDateForDB(rangeDate),
-            hour_number: hour,
-            override_text: rangeText,
+      if (updates.length > 0) {
+        const { error: overridesError } = await supabase
+          .from('schedule_overrides')
+          .upsert(updates, {
+            onConflict: 'student_id,date,hour_number',
           });
-        }
+
+        if (overridesError) throw overridesError;
       }
 
-      const { error } = await supabase
-        .from('schedule_overrides')
-        .upsert(updates, {
-          onConflict: 'student_id,date,hour_number',
-        });
+      // Handle reset date if checked
+      if (shouldSetResetDate) {
+        const resetUpdates = selectedStudents.map((studentName) => ({
+          student_id: studentName,
+          reset_date: formatDateForDB(resetDate),
+        }));
 
-      if (error) throw error;
+        const { error: resetError } = await supabase
+          .from('reset_dates')
+          .upsert(resetUpdates, {
+            onConflict: 'student_id',
+          });
+
+        if (resetError) throw resetError;
+      }
     },
     onSuccess: () => {
       toast({
-        title: 'הטווח עודכן בהצלחה',
+        title: 'השינויים נשמרו בהצלחה',
       });
       queryClient.invalidateQueries({ queryKey: ['overrides'] });
+      queryClient.invalidateQueries({ queryKey: ['resetDate'] });
+      setHourContents({});
       setRangeText('');
     },
     onError: (error: Error) => {
       toast({
-        title: error.message || 'שגיאה בעדכון הטווח',
+        title: error.message || 'שגיאה בשמירת השינויים',
         variant: 'destructive',
       });
     },
   });
 
-  const setResetDateMutation = useMutation({
+  const resetToBaseMutation = useMutation({
     mutationFn: async () => {
-      const updates = selectedStudents.map((studentName) => ({
-        student_id: studentName,
-        reset_date: formatDateForDB(resetDate),
-      }));
+      // Delete all overrides for selected students
+      for (const studentName of selectedStudents) {
+        const { error: overridesError } = await supabase
+          .from('schedule_overrides')
+          .delete()
+          .eq('student_id', studentName);
 
-      const { error } = await supabase
-        .from('reset_dates')
-        .upsert(updates, {
-          onConflict: 'student_id',
-        });
+        if (overridesError) throw overridesError;
 
-      if (error) throw error;
+        // Delete reset date
+        const { error: resetError } = await supabase
+          .from('reset_dates')
+          .delete()
+          .eq('student_id', studentName);
+
+        if (resetError) throw resetError;
+      }
     },
     onSuccess: () => {
       toast({
-        title: 'תאריך האיפוס נקבע בהצלחה',
+        title: 'התלמידים אופסו למערכת הבסיס',
       });
+      queryClient.invalidateQueries({ queryKey: ['overrides'] });
       queryClient.invalidateQueries({ queryKey: ['resetDate'] });
     },
     onError: () => {
       toast({
-        title: 'שגיאה בקביעת תאריך האיפוס',
+        title: 'שגיאה באיפוס למערכת בסיס',
         variant: 'destructive',
       });
     },
