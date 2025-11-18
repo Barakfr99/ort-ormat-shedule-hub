@@ -173,7 +173,9 @@ export default function AdminPanel() {
     },
     onSuccess: () => {
       toast({
-        title: 'השינויים נשמרו בהצלחה',
+        title: '✅ המערכת עודכנה בהצלחה',
+        description: `השינויים נשמרו עבור ${selectedStudents.length} תלמידים`,
+        duration: 5000,
       });
       queryClient.invalidateQueries({ queryKey: ['overrides'] });
       queryClient.invalidateQueries({ queryKey: ['resetDate'] });
@@ -210,7 +212,9 @@ export default function AdminPanel() {
     },
     onSuccess: () => {
       toast({
-        title: 'התלמידים אופסו למערכת הבסיס',
+        title: '✅ האיפוס בוצע בהצלחה',
+        description: `${selectedStudents.length} תלמידים אופסו למערכת הבסיס`,
+        duration: 5000,
       });
       queryClient.invalidateQueries({ queryKey: ['overrides'] });
       queryClient.invalidateQueries({ queryKey: ['resetDate'] });
