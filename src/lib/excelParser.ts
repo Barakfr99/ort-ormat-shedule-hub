@@ -49,9 +49,11 @@ export async function parseExcelFile(file: File | string): Promise<ParsedSchedul
     const studentName = String(row[0]).trim();
     const classInfo = String(row[1]).trim();
     
-    // Extract grade from class (e.g., "י' 2" -> "י'")
-    const gradeMatch = classInfo.match(/^[א-ת]+'?/);
+    // Extract grade from class (e.g., "י' 2" -> "י'", "י"א 1" -> "י"א", "י"ב 3" -> "י"ב")
+    const gradeMatch = classInfo.match(/^(?:[א-ת]+'|[א-ת]+"[א-ת])/);
     const grade = gradeMatch ? gradeMatch[0] : '';
+    
+    console.log('Parsing student:', studentName, 'class:', classInfo, 'extracted grade:', grade);
     
     gradesSet.add(grade);
     classesSet.add(classInfo);
