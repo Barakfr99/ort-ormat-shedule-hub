@@ -100,42 +100,42 @@ export default function ViewSchedule() {
       <Header title={`מערכת שעות של ${studentName}`} />
 
       <main className="flex-1 container mx-auto px-4 py-6 max-w-4xl">
-        <div className="mb-6">
+        <div className="mb-6 space-y-4">
           <Button 
             variant="outline" 
             onClick={() => navigate('/')}
-            className="mb-4"
+            className="w-full sm:w-auto"
           >
             <ArrowRight className="ml-2 h-4 w-4" />
             חזור לבחירה
           </Button>
 
-          <Card className="p-4 card-elevated">
-            <div className="flex items-center justify-between gap-4">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => changeDate(1)}
-                className="transition-transform hover:scale-110"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
+          <div className="flex items-center justify-between gap-4">
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => changeDate(1)}
+              className="transition-transform hover:scale-110 hover:bg-primary/10"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
 
-              <div className="text-center flex-1">
-                <p className="text-sm text-muted-foreground">תאריך</p>
-                <p className="text-xl font-bold text-foreground">{formatDate(currentDate)}</p>
-              </div>
-
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => changeDate(-1)}
-                className="transition-transform hover:scale-110"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
+            <div className="text-center flex-1">
+              <p className="text-3xl font-bold text-primary">
+                {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][currentDate.getDay()]}
+              </p>
+              <p className="text-lg text-muted-foreground mt-1">{formatDate(currentDate)}</p>
             </div>
-          </Card>
+
+            <Button
+              variant="ghost"
+              size="lg"
+              onClick={() => changeDate(-1)}
+              className="transition-transform hover:scale-110 hover:bg-primary/10"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </Button>
+          </div>
         </div>
 
         {isWeekend ? (
@@ -147,33 +147,52 @@ export default function ViewSchedule() {
             <p className="text-lg text-muted-foreground">לא נמצאה מערכת ליום זה</p>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((hour) => {
-              const content = getHourContent(hour);
-              const isEmpty = !content || content.trim() === '';
+          <Card className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b-2 border-border">
+                    <th className="p-4 text-center font-bold text-foreground bg-muted/30 border-l border-border w-24">
+                      שעה
+                    </th>
+                    <th className="p-4 text-center font-bold text-foreground bg-muted/30">
+                      {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][currentDate.getDay()]}
+                      <br />
+                      <span className="text-sm text-primary font-normal">{formatDate(currentDate)}</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((hour) => {
+                    const content = getHourContent(hour);
+                    const isEmpty = !content || content.trim() === '';
 
-              return (
-                <Card
-                  key={hour}
-                  className="p-4 card-elevated transition-all duration-300 animate-fade-in"
-                  style={{ animationDelay: `${hour * 50}ms` }}
-                >
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-16 h-16 rounded-lg bg-primary/10 flex items-center justify-center">
-                      <span className="text-2xl font-bold text-primary">{hour}</span>
-                    </div>
-                    <div className="flex-1 min-h-[3rem] flex items-center">
-                      {isEmpty ? (
-                        <p className="text-lg text-muted-foreground italic">חלון</p>
-                      ) : (
-                        <p className="text-base text-foreground leading-relaxed">{content}</p>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              );
-            })}
-          </div>
+                    return (
+                      <tr 
+                        key={hour}
+                        className={`border-b border-border transition-colors hover:bg-muted/20 ${
+                          hour % 2 === 0 ? 'bg-background' : 'bg-muted/10'
+                        }`}
+                      >
+                        <td className="p-4 text-center font-bold text-lg text-foreground border-l border-border">
+                          {hour}
+                        </td>
+                        <td className="p-4 text-center min-h-[80px]">
+                          {isEmpty ? (
+                            <span className="text-muted-foreground italic">חלון</span>
+                          ) : (
+                            <div className="text-foreground leading-relaxed whitespace-pre-wrap">
+                              {content}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         )}
       </main>
 
