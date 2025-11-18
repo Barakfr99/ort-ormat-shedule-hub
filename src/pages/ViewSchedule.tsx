@@ -188,10 +188,10 @@ export default function ViewSchedule() {
               <table className="w-full border-collapse">
                 <thead>
                   <tr className="border-b-2 border-border">
-                    <th className="p-4 text-center font-bold text-foreground bg-muted/30 border-l border-border w-24">
+                    <th className="p-4 text-center font-bold text-foreground bg-blue-100 dark:bg-blue-950 border-l border-border w-32">
                       שעה
                     </th>
-                    <th className="p-4 text-center font-bold text-foreground bg-muted/30">
+                    <th className="p-4 text-center font-bold text-foreground bg-blue-100 dark:bg-blue-950">
                       {['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'][currentDate.getDay()]}
                       <br />
                       <span className="text-sm text-primary font-normal">{formatDate(currentDate)}</span>
@@ -207,17 +207,19 @@ export default function ViewSchedule() {
                     return (
                       <tr 
                         key={hour}
-                        className={`border-b border-border transition-colors hover:bg-muted/20 ${
-                          hour % 2 === 0 ? 'bg-background' : 'bg-muted/10'
-                        }`}
+                        className="border-b border-border transition-colors hover:bg-muted/30"
                       >
-                        <td className="p-4 border-l border-border">
+                        <td className="p-4 border-l border-border bg-blue-100 dark:bg-blue-950">
                           <div className="text-center">
                             <div className="font-bold text-lg text-foreground">{label}</div>
                             <div className="text-xs text-muted-foreground mt-1">{time}</div>
                           </div>
                         </td>
-                        <td className="p-4 min-h-[100px]">
+                        <td className={`p-4 min-h-[100px] ${
+                          isEmpty 
+                            ? 'bg-white dark:bg-background' 
+                            : 'bg-amber-50 dark:bg-amber-950/30'
+                        }`}>
                           {isEmpty || !parsedContent ? (
                             <div className="text-center text-muted-foreground italic py-4">חלון</div>
                           ) : (
