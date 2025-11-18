@@ -319,8 +319,8 @@ export default function AdminPanel() {
               </div>
 
               <Button
-                onClick={() => saveScheduleMutation.mutate()}
-                disabled={selectedStudents.length === 0 || saveScheduleMutation.isPending}
+                onClick={() => saveChangesMutation.mutate()}
+                disabled={selectedStudents.length === 0 || saveChangesMutation.isPending}
                 className="w-full gradient-primary"
               >
                 <Save className="ml-2 h-4 w-4" />
@@ -402,8 +402,8 @@ export default function AdminPanel() {
                 </div>
 
                 <Button
-                  onClick={() => applyRangeMutation.mutate()}
-                  disabled={selectedStudents.length === 0 || !rangeText || applyRangeMutation.isPending}
+                  onClick={() => saveChangesMutation.mutate()}
+                  disabled={selectedStudents.length === 0 || !rangeText || saveChangesMutation.isPending}
                   className="w-full gradient-primary"
                 >
                   החל על השעות
@@ -446,11 +446,11 @@ export default function AdminPanel() {
               )}
 
               <Button
-                onClick={() => setResetDateMutation.mutate()}
-                disabled={selectedStudents.length === 0 || setResetDateMutation.isPending}
-                className="w-full gradient-primary"
+                onClick={() => resetToBaseMutation.mutate()}
+                disabled={selectedStudents.length === 0 || resetToBaseMutation.isPending}
+                variant="destructive"
               >
-              קבע תאריך איפוס
+              איפוס למערכת בסיס
             </Button>
           </Card>
         </div>
