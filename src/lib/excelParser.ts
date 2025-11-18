@@ -78,6 +78,7 @@ export async function parseExcelFile(file: File | string): Promise<ParsedSchedul
   const students: StudentSchedule[] = [];
   const gradesSet = new Set<string>();
   const classesSet = new Set<string>();
+  const studentNamesSet = new Set<string>(); // Track unique student names
 
   // Skip header row
   for (let i = 1; i < data.length; i++) {
@@ -86,6 +87,13 @@ export async function parseExcelFile(file: File | string): Promise<ParsedSchedul
 
     const studentName = String(row[0]).trim();
     const classInfo = String(row[1]).trim();
+    
+    // Skip duplicate students
+    if (studentNamesSet.has(studentName)) {
+      console.log('Skipping duplicate student:', studentName);
+      continue;
+    }
+    studentNamesSet.add(studentName);
     
     // Extract grade from class (e.g., "י' 2" -> "י'", "י"א 1" -> "י"א", "י"ב 3" -> "י"ב")
     const gradeMatch = classInfo.match(/^(?:[א-ת]+'|[א-ת]+"[א-ת])/);
