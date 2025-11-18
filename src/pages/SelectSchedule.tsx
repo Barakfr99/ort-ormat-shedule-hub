@@ -36,8 +36,8 @@ export default function SelectSchedule() {
     : data?.classes || [];
 
   const filteredStudents = selectedClass
-    ? data?.students.filter((s) => s.class === selectedClass)
-    : data?.students || [];
+    ? data?.students.filter((s) => s.class === selectedClass).sort((a, b) => a.name.localeCompare(b.name, 'he'))
+    : data?.students.sort((a, b) => a.name.localeCompare(b.name, 'he')) || [];
 
   const handleShowSchedule = () => {
     if (!selectedStudent) {
@@ -56,18 +56,6 @@ export default function SelectSchedule() {
 
     navigate(`/schedule?student=${encodeURIComponent(selectedStudent)}&date=${selectedDate.toISOString()}`);
   };
-
-  useEffect(() => {
-    if (data) {
-      console.log('Loaded data:', {
-        gradesCount: data.grades.length,
-        grades: data.grades,
-        classesCount: data.classes.length,
-        classes: data.classes.slice(0, 5),
-        studentsCount: data.students.length
-      });
-    }
-  }, [data]);
 
   if (loading) {
     return (
