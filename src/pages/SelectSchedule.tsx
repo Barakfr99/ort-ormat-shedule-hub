@@ -57,6 +57,18 @@ export default function SelectSchedule() {
     navigate(`/schedule?student=${encodeURIComponent(selectedStudent)}&date=${selectedDate.toISOString()}`);
   };
 
+  useEffect(() => {
+    if (data) {
+      console.log('Loaded data:', {
+        gradesCount: data.grades.length,
+        grades: data.grades,
+        classesCount: data.classes.length,
+        classes: data.classes.slice(0, 5),
+        studentsCount: data.students.length
+      });
+    }
+  }, [data]);
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
