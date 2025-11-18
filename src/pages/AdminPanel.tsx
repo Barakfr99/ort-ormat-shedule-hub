@@ -34,7 +34,8 @@ export default function AdminPanel() {
   const [rangeText, setRangeText] = useState('');
   const [rangeStart, setRangeStart] = useState('1');
   const [rangeEnd, setRangeEnd] = useState('8');
-  const [rangeDate, setRangeDate] = useState<Date>(new Date());
+  const [rangeDates, setRangeDates] = useState<Date[]>([new Date()]);
+  const [isFullDay, setIsFullDay] = useState(false);
   
   const [shouldSetResetDate, setShouldSetResetDate] = useState(false);
   const [resetDate, setResetDate] = useState<Date>(new Date());
@@ -100,21 +101,23 @@ export default function AdminPanel() {
         }
       } else {
         // Range update
-        const start = parseInt(rangeStart);
-        const end = parseInt(rangeEnd);
+        const start = isFullDay ? 1 : parseInt(rangeStart);
+        const end = isFullDay ? 8 : parseInt(rangeEnd);
         
-        if (isNaN(start) || isNaN(end) || start < 1 || end > 8 || start > end) {
+        if (!isFullDay && (isNaN(start) || isNaN(end) || start < 1 || end > 8 || start > end)) {
           throw new Error('טווח שעות לא תקין');
         }
 
         for (const studentName of selectedStudents) {
-          for (let hour = start; hour <= end; hour++) {
-            updates.push({
-              student_id: studentName,
-              date: formatDateForDB(rangeDate),
-              hour_number: hour,
-              override_text: rangeText,
-            });
+          for (const date of rangeDates) {
+            for (let hour = start; hour <= end; hour++) {
+              updates.push({
+                student_id: studentName,
+                date: formatDateForDB(date),
+                hour_number: hour,
+                override_text: rangeText,
+              });
+            }
           }
         }
       }
@@ -344,66 +347,82 @@ export default function AdminPanel() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2 text-foreground">תאריך</label>
+                  <label className="block text-sm font-medium mb-2 text-foreground">תאריכים</label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button variant="outline" className="w-full justify-start text-right">
                         <CalendarIcon className="ml-2 h-4 w-4" />
-                        {formatDate(rangeDate)}
+                        {rangeDates.length === 1 
+                          ? formatDate(rangeDates[0])
+                          : `${rangeDates.length} ימים נבחרו`
+                        }
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <Calendar
-                        mode="single"
-                        selected={rangeDate}
-                        onSelect={(date) => date && setRangeDate(date)}
+                        mode="multiple"
+                        selected={rangeDates}
+                        onSelect={(dates) => dates && setRangeDates(dates)}
                         className="pointer-events-auto"
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-foreground">
-                      מ-שעה
-                    </label>
-                    <Select value={rangeStart} onValueChange={setRangeStart}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
-                          <SelectItem key={h} value={h.toString()}>
-                            {h}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-foreground">
-                      עד-שעה
-                    </label>
-                    <Select value={rangeEnd} onValueChange={setRangeEnd}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
-                          <SelectItem key={h} value={h.toString()}>
-                            {h}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox
+                    checked={isFullDay}
+                    onCheckedChange={(checked) => setIsFullDay(checked === true)}
+                    id="full-day"
+                  />
+                  <label htmlFor="full-day" className="text-sm font-medium text-foreground cursor-pointer">
+                    יום מלא (כל 8 השעות)
+                  </label>
                 </div>
+
+                {!isFullDay && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-foreground">
+                        מ-שעה
+                      </label>
+                      <Select value={rangeStart} onValueChange={setRangeStart}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
+                            <SelectItem key={h} value={h.toString()}>
+                              {h}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-foreground">
+                        עד-שעה
+                      </label>
+                      <Select value={rangeEnd} onValueChange={setRangeEnd}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
+                            <SelectItem key={h} value={h.toString()}>
+                              {h}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
 
                 <Button
                   onClick={() => saveChangesMutation.mutate()}
-                  disabled={selectedStudents.length === 0 || !rangeText || saveChangesMutation.isPending}
+                  disabled={selectedStudents.length === 0 || !rangeText || rangeDates.length === 0 || saveChangesMutation.isPending}
                   className="w-full gradient-primary"
                 >
                   החל על השעות
