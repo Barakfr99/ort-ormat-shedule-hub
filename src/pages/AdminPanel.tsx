@@ -219,9 +219,10 @@ export default function AdminPanel() {
       queryClient.invalidateQueries({ queryKey: ['overrides'] });
       queryClient.invalidateQueries({ queryKey: ['resetDate'] });
     },
-    onError: () => {
+    onError: (error: Error) => {
       toast({
         title: 'שגיאה באיפוס למערכת בסיס',
+        description: error.message || 'נסה שוב',
         variant: 'destructive',
       });
     },
