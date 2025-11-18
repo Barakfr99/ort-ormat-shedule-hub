@@ -39,7 +39,21 @@ export default function AdminPanel() {
   const [isFullDay, setIsFullDay] = useState(false);
   
   const [shouldSetResetDate, setShouldSetResetDate] = useState(false);
+  const [isPermanentChange, setIsPermanentChange] = useState(false);
   const [resetDate, setResetDate] = useState<Date>(new Date());
+
+  // Update reset date default when edit mode or dates change
+  useEffect(() => {
+    if (editMode === 'daily') {
+      setResetDate(editDate);
+    } else if (editMode === 'range' && rangeDates.length > 0) {
+      // Set to the latest date in the range
+      const latestDate = rangeDates.reduce((latest, current) => 
+        current > latest ? current : latest, rangeDates[0]
+      );
+      setResetDate(latestDate);
+    }
+  }, [editMode, editDate, rangeDates]);
 
   useEffect(() => {
     const isAuth = sessionStorage.getItem('adminAuth');
@@ -133,8 +147,8 @@ export default function AdminPanel() {
         if (overridesError) throw overridesError;
       }
 
-      // Handle reset date if checked
-      if (shouldSetResetDate) {
+      // Handle reset date if not permanent change
+      if (!isPermanentChange && shouldSetResetDate) {
         const resetUpdates = selectedStudents.map((studentName) => ({
           student_id: studentName,
           reset_date: formatDateForDB(resetDate),
@@ -147,6 +161,14 @@ export default function AdminPanel() {
           });
 
         if (resetError) throw resetError;
+      } else if (isPermanentChange) {
+        // If permanent change, delete any existing reset dates
+        for (const studentName of selectedStudents) {
+          await supabase
+            .from('reset_dates')
+            .delete()
+            .eq('student_id', studentName);
+        }
       }
     },
     onSuccess: () => {
@@ -435,38 +457,60 @@ export default function AdminPanel() {
             )}
 
             <Card className="p-6 card-elevated">
+              <h3 className="text-xl font-bold mb-4 text-foreground">הגדרות איפוס</h3>
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
                   <Checkbox
-                    checked={shouldSetResetDate}
-                    onCheckedChange={(checked) => setShouldSetResetDate(checked === true)}
-                    id="set-reset-date"
+                    checked={isPermanentChange}
+                    onCheckedChange={(checked) => {
+                      setIsPermanentChange(checked === true);
+                      if (checked) setShouldSetResetDate(false);
+                    }}
+                    id="permanent-change"
                   />
-                  <label htmlFor="set-reset-date" className="text-sm font-medium text-foreground cursor-pointer">
-                    הגדר תאריך איפוס (המערכת תחזור אוטומטית למערכת בסיס אחרי תאריך זה)
+                  <label htmlFor="permanent-change" className="text-sm font-medium text-foreground cursor-pointer">
+                    שינוי מערכת קבוע (השינויים יישארו לצמיתות)
                   </label>
                 </div>
 
-                {shouldSetResetDate && (
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-foreground">תאריך איפוס</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-right">
-                          <CalendarIcon className="ml-2 h-4 w-4" />
-                          {formatDate(resetDate)}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={resetDate}
-                          onSelect={(date) => date && setResetDate(date)}
-                          className="pointer-events-auto"
-                        />
-                      </PopoverContent>
-                    </Popover>
-                  </div>
+                {!isPermanentChange && (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        checked={shouldSetResetDate}
+                        onCheckedChange={(checked) => setShouldSetResetDate(checked === true)}
+                        id="set-reset-date"
+                      />
+                      <label htmlFor="set-reset-date" className="text-sm font-medium text-foreground cursor-pointer">
+                        הגדר תאריך איפוס (המערכת תחזור אוטומטית למערכת בסיס אחרי תאריך זה)
+                      </label>
+                    </div>
+
+                    {shouldSetResetDate && (
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-foreground">תאריך איפוס</label>
+                        <p className="text-xs text-muted-foreground mb-2">
+                          ברירת מחדל: בתום היום האחרון של השינוי
+                        </p>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start text-right">
+                              <CalendarIcon className="ml-2 h-4 w-4" />
+                              {formatDate(resetDate)}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0">
+                            <Calendar
+                              mode="single"
+                              selected={resetDate}
+                              onSelect={(date) => date && setResetDate(date)}
+                              className="pointer-events-auto"
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <Button
