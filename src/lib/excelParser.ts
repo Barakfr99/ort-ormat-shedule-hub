@@ -20,6 +20,44 @@ export interface ParsedScheduleData {
 const DAYS = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי'];
 const HOURS_PER_DAY = 8;
 
+// Hebrew grade order for sorting
+const GRADE_ORDER: { [key: string]: number } = {
+  "ט'": 1,
+  "י'": 2,
+  "י\"א": 3,
+  "י\"ב": 4,
+  "יא": 3, // Alternative without quotes
+  "יב": 4,
+};
+
+function sortGrades(grades: string[]): string[] {
+  return grades.sort((a, b) => {
+    const orderA = GRADE_ORDER[a] || 999;
+    const orderB = GRADE_ORDER[b] || 999;
+    return orderA - orderB;
+  });
+}
+
+function sortClasses(classes: string[]): string[] {
+  return classes.sort((a, b) => {
+    // Extract grade and class number
+    const gradeA = a.match(/^(?:[א-ת]+'|[א-ת]+"[א-ת])/)?.[0] || '';
+    const gradeB = b.match(/^(?:[א-ת]+'|[א-ת]+"[א-ת])/)?.[0] || '';
+    
+    const orderA = GRADE_ORDER[gradeA] || 999;
+    const orderB = GRADE_ORDER[gradeB] || 999;
+    
+    // If same grade, sort by class number
+    if (orderA === orderB) {
+      const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+      const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+      return numA - numB;
+    }
+    
+    return orderA - orderB;
+  });
+}
+
 export async function parseExcelFile(file: File | string): Promise<ParsedScheduleData> {
   let workbook: XLSX.WorkBook;
 
@@ -53,8 +91,6 @@ export async function parseExcelFile(file: File | string): Promise<ParsedSchedul
     const gradeMatch = classInfo.match(/^(?:[א-ת]+'|[א-ת]+"[א-ת])/);
     const grade = gradeMatch ? gradeMatch[0] : '';
     
-    console.log('Parsing student:', studentName, 'class:', classInfo, 'extracted grade:', grade);
-    
     gradesSet.add(grade);
     classesSet.add(classInfo);
 
@@ -80,9 +116,9 @@ export async function parseExcelFile(file: File | string): Promise<ParsedSchedul
   }
 
   return {
-    students,
-    grades: Array.from(gradesSet).sort(),
-    classes: Array.from(classesSet).sort(),
+    students: students.sort((a, b) => a.name.localeCompare(b.name, 'he')),
+    grades: sortGrades(Array.from(gradesSet)),
+    classes: sortClasses(Array.from(classesSet)),
   };
 }
 
