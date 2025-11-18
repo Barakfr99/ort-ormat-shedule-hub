@@ -32,6 +32,7 @@ export default function AdminPanel() {
   const [rangeText, setRangeText] = useState('');
   const [rangeStart, setRangeStart] = useState('1');
   const [rangeEnd, setRangeEnd] = useState('8');
+  const [rangeDate, setRangeDate] = useState<Date>(new Date());
   
   const [resetDate, setResetDate] = useState<Date>(new Date());
 
@@ -131,7 +132,7 @@ export default function AdminPanel() {
         for (let hour = start; hour <= end; hour++) {
           updates.push({
             student_id: studentName,
-            date: formatDateForDB(editDate),
+            date: formatDateForDB(rangeDate),
             hour_number: hour,
             override_text: rangeText,
           });
@@ -207,21 +208,9 @@ export default function AdminPanel() {
           התנתק וחזור
         </Button>
 
-        <Tabs defaultValue="edit" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="edit">
-              <CalendarIcon className="ml-2 h-4 w-4" />
-              עריכת מערכת
-            </TabsTrigger>
-            <TabsTrigger value="reset">
-              <Users className="ml-2 h-4 w-4" />
-              איפוס למערכת בסיס
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="edit" className="space-y-6">
-            <Card className="p-6 card-elevated">
-              <h3 className="text-xl font-bold mb-4 text-foreground">סינון תלמידים</h3>
+        <div className="space-y-6">
+          <Card className="p-6 card-elevated">
+            <h3 className="text-xl font-bold mb-4 text-foreground">סינון תלמידים</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-2 text-foreground">שכבה</label>
@@ -348,6 +337,26 @@ export default function AdminPanel() {
                   />
                 </div>
 
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-foreground">תאריך</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-right">
+                        <CalendarIcon className="ml-2 h-4 w-4" />
+                        {formatDate(rangeDate)}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={rangeDate}
+                        onSelect={(date) => date && setRangeDate(date)}
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium mb-2 text-foreground">
@@ -395,9 +404,7 @@ export default function AdminPanel() {
                 </Button>
               </div>
             </Card>
-          </TabsContent>
 
-          <TabsContent value="reset">
             <Card className="p-6 card-elevated">
               <h3 className="text-xl font-bold mb-4 text-foreground">איפוס למערכת בסיס</h3>
               <p className="text-muted-foreground mb-6">
@@ -437,11 +444,10 @@ export default function AdminPanel() {
                 disabled={selectedStudents.length === 0 || setResetDateMutation.isPending}
                 className="w-full gradient-primary"
               >
-                קבע תאריך איפוס
-              </Button>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              קבע תאריך איפוס
+            </Button>
+          </Card>
+        </div>
       </main>
 
       <Footer />
