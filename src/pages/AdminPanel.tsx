@@ -42,10 +42,16 @@ export default function AdminPanel() {
     }
   }, [navigate]);
 
-  // Clear selected students when grade or class changes
+  // Clear selected class and students when grade changes
+  useEffect(() => {
+    setSelectedClass('');
+    setSelectedStudents([]);
+  }, [selectedGrade]);
+
+  // Clear selected students when class changes
   useEffect(() => {
     setSelectedStudents([]);
-  }, [selectedGrade, selectedClass]);
+  }, [selectedClass]);
 
   const filteredClasses = selectedGrade
     ? data?.classes.filter((c) => c.startsWith(selectedGrade))
