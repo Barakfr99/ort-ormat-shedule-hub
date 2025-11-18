@@ -38,10 +38,10 @@ export default function AdminLogin() {
           <div className="text-center mb-8">
             <img 
               src={schoolLogo} 
-              alt="אורות יבנה" 
+              alt="אורט אורמת" 
               className="h-20 w-auto mx-auto mb-4 opacity-80"
             />
-            <h2 className="text-2xl font-bold text-foreground mb-2">ניהול מערכות – אורות יבנה</h2>
+            <h2 className="text-2xl font-bold text-foreground mb-2">ניהול מערכות – אורט אורמת</h2>
             <p className="text-muted-foreground">הזן סיסמה להמשך</p>
           </div>
 

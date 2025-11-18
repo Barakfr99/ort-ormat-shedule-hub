@@ -13,7 +13,7 @@ export default function Header({ title, showLogo = true }: HeaderProps) {
         {showLogo && (
           <img 
             src={schoolLogo} 
-            alt="אורות יבנה" 
+            alt="אורט אורמת" 
             className="h-6 sm:h-8 md:h-10 w-auto"
           />
         )}
