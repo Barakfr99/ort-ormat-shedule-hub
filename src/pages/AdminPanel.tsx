@@ -12,16 +12,15 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { formatDate, formatDateForDB } from '@/lib/excelParser';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
   const { data } = useScheduleData();
-  const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const [selectedGrade, setSelectedGrade] = useState('');
@@ -41,6 +40,9 @@ export default function AdminPanel() {
   const [shouldSetResetDate, setShouldSetResetDate] = useState(false);
   const [isPermanentChange, setIsPermanentChange] = useState(false);
   const [resetDate, setResetDate] = useState<Date>(new Date());
+  
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', description: '' });
 
   // Update reset date default when edit mode or dates change
   useEffect(() => {
@@ -172,21 +174,24 @@ export default function AdminPanel() {
       }
     },
     onSuccess: () => {
-      toast({
-        title: '✅ המערכת עודכנה בהצלחה',
-        description: `השינויים נשמרו עבור ${selectedStudents.length} תלמידים`,
-        duration: 5000,
+      console.log('שמירת שינויים הושלמה', { selectedStudents: selectedStudents.length });
+      setSuccessMessage({
+        title: 'השינויים נשמרו בהצלחה',
+        description: `השינויים עבור ${selectedStudents.length} תלמידים נשמרו במערכת`
       });
+      setShowSuccessDialog(true);
       queryClient.invalidateQueries({ queryKey: ['overrides'] });
       queryClient.invalidateQueries({ queryKey: ['resetDate'] });
       setHourContents({});
       setRangeText('');
     },
     onError: (error: Error) => {
-      toast({
-        title: error.message || 'שגיאה בשמירת השינויים',
-        variant: 'destructive',
+      console.error('שגיאה בשמירה', error);
+      setSuccessMessage({
+        title: 'שגיאה בשמירת השינויים',
+        description: error.message || 'נסה שוב'
       });
+      setShowSuccessDialog(true);
     },
   });
 
@@ -212,22 +217,21 @@ export default function AdminPanel() {
     },
     onSuccess: () => {
       console.log('איפוס בוצע בהצלחה', { selectedStudents: selectedStudents.length });
-      toast({
-        title: '✅ האיפוס בוצע בהצלחה',
-        description: `${selectedStudents.length} תלמידים אופסו למערכת הבסיס`,
-        duration: 5000,
+      setSuccessMessage({
+        title: 'האיפוס בוצע בהצלחה',
+        description: `${selectedStudents.length} תלמידים אופסו למערכת הבסיס`
       });
+      setShowSuccessDialog(true);
       queryClient.invalidateQueries({ queryKey: ['overrides'] });
       queryClient.invalidateQueries({ queryKey: ['resetDate'] });
     },
     onError: (error: Error) => {
       console.error('שגיאה באיפוס', error);
-      toast({
-        title: '❌ שגיאה באיפוס למערכת בסיס',
-        description: error.message || 'נסה שוב',
-        variant: 'destructive',
-        duration: 5000,
+      setSuccessMessage({
+        title: 'שגיאה באיפוס למערכת בסיס',
+        description: error.message || 'נסה שוב'
       });
+      setShowSuccessDialog(true);
     },
   });
 
@@ -563,6 +567,23 @@ export default function AdminPanel() {
         </main>
 
         <Footer />
+
+        <AlertDialog open={showSuccessDialog} onOpenChange={setShowSuccessDialog}>
+          <AlertDialogContent className="max-w-md">
+            <AlertDialogTitle className="text-2xl font-bold text-center text-foreground">
+              ✅ {successMessage.title}
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-lg text-muted-foreground mt-4">
+              {successMessage.description}
+            </AlertDialogDescription>
+            <AlertDialogAction 
+              onClick={() => setShowSuccessDialog(false)}
+              className="w-full mt-6 gradient-primary"
+            >
+              סגור
+            </AlertDialogAction>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     );
   }
