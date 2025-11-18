@@ -211,6 +211,7 @@ export default function AdminPanel() {
       }
     },
     onSuccess: () => {
+      console.log('איפוס בוצע בהצלחה', { selectedStudents: selectedStudents.length });
       toast({
         title: '✅ האיפוס בוצע בהצלחה',
         description: `${selectedStudents.length} תלמידים אופסו למערכת הבסיס`,
@@ -220,10 +221,12 @@ export default function AdminPanel() {
       queryClient.invalidateQueries({ queryKey: ['resetDate'] });
     },
     onError: (error: Error) => {
+      console.error('שגיאה באיפוס', error);
       toast({
-        title: 'שגיאה באיפוס למערכת בסיס',
+        title: '❌ שגיאה באיפוס למערכת בסיס',
         description: error.message || 'נסה שוב',
         variant: 'destructive',
+        duration: 5000,
       });
     },
   });
