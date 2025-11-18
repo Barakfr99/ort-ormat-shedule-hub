@@ -42,13 +42,20 @@ export default function AdminPanel() {
     }
   }, [navigate]);
 
+  // Clear selected students when grade or class changes
+  useEffect(() => {
+    setSelectedStudents([]);
+  }, [selectedGrade, selectedClass]);
+
   const filteredClasses = selectedGrade
     ? data?.classes.filter((c) => c.startsWith(selectedGrade))
     : data?.classes || [];
 
   const filteredStudents = selectedClass
-    ? data?.students.filter((s) => s.class === selectedClass)
-    : data?.students || [];
+    ? data?.students.filter((s) => s.class === selectedClass).sort((a, b) => a.name.localeCompare(b.name, 'he'))
+    : selectedGrade
+    ? data?.students.filter((s) => s.grade === selectedGrade).sort((a, b) => a.name.localeCompare(b.name, 'he'))
+    : data?.students.sort((a, b) => a.name.localeCompare(b.name, 'he')) || [];
 
   const toggleStudent = (studentName: string) => {
     setSelectedStudents((prev) =>
