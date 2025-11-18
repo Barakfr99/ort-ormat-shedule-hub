@@ -10,6 +10,40 @@ import { getStudentScheduleForDate, formatDate, formatDateForDB } from '@/lib/ex
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 
+const HOUR_TIMES = [
+  { hour: 1, time: '08:45-09:15', label: 'שעה 1' },
+  { hour: 2, time: '09:15-10:00', label: 'שעה 2' },
+  { hour: 3, time: '10:20-11:05', label: 'שעה 3' },
+  { hour: 4, time: '11:05-11:50', label: 'שעה 4' },
+  { hour: 5, time: '12:05-12:50', label: 'שעה 5' },
+  { hour: 6, time: '12:50-13:30', label: 'שעה 6' },
+  { hour: 7, time: '14:00-14:45', label: 'שעה 7' },
+  { hour: 8, time: '14:45-15:30', label: 'שעה 8' },
+];
+
+function parseHourContent(content: string) {
+  if (!content || content.trim() === '') {
+    return null;
+  }
+
+  // Try to parse the content format: "Subject / Teacher / Room"
+  const parts = content.split('/').map(part => part.trim());
+  
+  if (parts.length >= 1) {
+    return {
+      subject: parts[0] || '',
+      teacher: parts[1] || '',
+      room: parts[2] || ''
+    };
+  }
+  
+  return {
+    subject: content,
+    teacher: '',
+    room: ''
+  };
+}
+
 export default function ViewSchedule() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -163,9 +197,10 @@ export default function ViewSchedule() {
                   </tr>
                 </thead>
                 <tbody>
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((hour) => {
+                  {HOUR_TIMES.map(({ hour, time, label }) => {
                     const content = getHourContent(hour);
                     const isEmpty = !content || content.trim() === '';
+                    const parsedContent = isEmpty ? null : parseHourContent(content);
 
                     return (
                       <tr 
@@ -174,15 +209,30 @@ export default function ViewSchedule() {
                           hour % 2 === 0 ? 'bg-background' : 'bg-muted/10'
                         }`}
                       >
-                        <td className="p-4 text-center font-bold text-lg text-foreground border-l border-border">
-                          {hour}
+                        <td className="p-4 border-l border-border">
+                          <div className="text-center">
+                            <div className="font-bold text-lg text-foreground">{label}</div>
+                            <div className="text-xs text-muted-foreground mt-1">{time}</div>
+                          </div>
                         </td>
-                        <td className="p-4 text-center min-h-[80px]">
-                          {isEmpty ? (
-                            <span className="text-muted-foreground italic">חלון</span>
+                        <td className="p-4 min-h-[100px]">
+                          {isEmpty || !parsedContent ? (
+                            <div className="text-center text-muted-foreground italic py-4">חלון</div>
                           ) : (
-                            <div className="text-foreground leading-relaxed whitespace-pre-wrap">
-                              {content}
+                            <div className="space-y-1 py-2">
+                              <div className="font-semibold text-base text-foreground">
+                                {parsedContent.subject}
+                              </div>
+                              {parsedContent.teacher && (
+                                <div className="text-sm text-muted-foreground">
+                                  {parsedContent.teacher}
+                                </div>
+                              )}
+                              {parsedContent.room && (
+                                <div className="text-sm text-primary">
+                                  כיתת לימוד: {parsedContent.room}
+                                </div>
+                              )}
                             </div>
                           )}
                         </td>
