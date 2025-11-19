@@ -100,6 +100,60 @@ export default function AdminPanel() {
 
   const saveChangesMutation = useMutation({
     mutationFn: async () => {
+      if (selectedStudents.length === 0) {
+        throw new Error('לא נבחרו תלמידים');
+      }
+
+      // Handle permanent changes
+      if (editMode === 'permanent') {
+        if (permanentPassword !== '2002') {
+          throw new Error('סיסמה שגויה לשינוי קבוע');
+        }
+
+        const dayOfWeek = editDate.toLocaleDateString('en-US', { weekday: 'long' });
+
+        for (const studentName of selectedStudents) {
+          // Fetch student_id from database
+          const { data: studentData } = await supabase
+            .from('students')
+            .select('student_id')
+            .eq('name', studentName)
+            .single();
+
+          if (!studentData) continue;
+
+          for (let hour = 1; hour <= 8; hour++) {
+            const content = hourContents[hour];
+            if (content !== undefined && content.trim() !== '') {
+              const { data: existing } = await supabase
+                .from('base_schedule')
+                .select('id')
+                .eq('student_id', studentData.student_id)
+                .eq('day', dayOfWeek)
+                .eq('hour_number', hour)
+                .single();
+
+              if (existing) {
+                await supabase
+                  .from('base_schedule')
+                  .update({ content })
+                  .eq('id', existing.id);
+              } else {
+                await supabase
+                  .from('base_schedule')
+                  .insert({
+                    student_id: studentData.student_id,
+                    day: dayOfWeek,
+                    hour_number: hour,
+                    content,
+                  });
+              }
+            }
+          }
+        }
+        return;
+      }
+
       const updates = [];
       
       if (editMode === 'daily') {
@@ -178,13 +232,17 @@ export default function AdminPanel() {
       console.log('שמירת שינויים הושלמה', { selectedStudents: selectedStudents.length });
       setSuccessMessage({
         title: 'השינויים נשמרו בהצלחה',
-        description: `השינויים עבור ${selectedStudents.length} תלמידים נשמרו במערכת`
+        description: editMode === 'permanent' 
+          ? `השינויים הקבועים עבור ${selectedStudents.length} תלמידים נשמרו במערכת הבסיס`
+          : `השינויים עבור ${selectedStudents.length} תלמידים נשמרו במערכת`
       });
       setShowSuccessDialog(true);
       queryClient.invalidateQueries({ queryKey: ['overrides'] });
       queryClient.invalidateQueries({ queryKey: ['resetDate'] });
+      queryClient.invalidateQueries({ queryKey: ['scheduleData'] });
       setHourContents({});
       setRangeText('');
+      setPermanentPassword('');
     },
     onError: (error: Error) => {
       console.error('שגיאה בשמירה', error);
@@ -330,17 +388,84 @@ export default function AdminPanel() {
             <Card className="p-6 card-elevated">
               <h3 className="text-xl font-bold mb-4 text-foreground">בחר סוג עריכה</h3>
               
-              <RadioGroup value={editMode} onValueChange={(value: 'daily' | 'range') => setEditMode(value)}>
+              <RadioGroup value={editMode} onValueChange={(value: 'daily' | 'range' | 'permanent') => setEditMode(value)}>
                 <div className="flex items-center space-x-2 space-x-reverse mb-2">
                   <RadioGroupItem value="daily" id="daily" />
                   <Label htmlFor="daily" className="cursor-pointer">עריכת מערכת לפי יום</Label>
                 </div>
-                <div className="flex items-center space-x-2 space-x-reverse">
+                <div className="flex items-center space-x-2 space-x-reverse mb-2">
                   <RadioGroupItem value="range" id="range" />
                   <Label htmlFor="range" className="cursor-pointer">עדכון טווח שעות</Label>
                 </div>
+                <div className="flex items-center space-x-2 space-x-reverse">
+                  <RadioGroupItem value="permanent" id="permanent" />
+                  <Label htmlFor="permanent" className="cursor-pointer text-destructive font-semibold">שינוי קבוע במערכת הבסיס</Label>
+                </div>
               </RadioGroup>
             </Card>
+
+            {editMode === 'permanent' && (
+              <Card className="p-6 card-elevated border-destructive">
+                <h3 className="text-xl font-bold mb-4 text-destructive">שינוי קבוע במערכת הבסיס</h3>
+                
+                <div className="bg-destructive/10 border border-destructive rounded-lg p-4 mb-4">
+                  <p className="text-sm text-destructive font-medium">
+                    ⚠️ אזהרה: שינוי זה ישנה את מערכת הבסיס באופן קבוע עבור יום זה בשבוע
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">סיסמה לשינוי קבוע</label>
+                    <Input
+                      type="password"
+                      value={permanentPassword}
+                      onChange={(e) => setPermanentPassword(e.target.value)}
+                      placeholder="הזן סיסמה"
+                      className="text-right"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium mb-2 text-foreground">תאריך (יום בשבוע)</label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className="w-full justify-start text-right">
+                          <CalendarIcon className="ml-2 h-4 w-4" />
+                          {formatDate(editDate)}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar
+                          mode="single"
+                          selected={editDate}
+                          onSelect={(date) => date && setEditDate(date)}
+                          className="pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      השינוי יחול על כל {editDate.toLocaleDateString('he-IL', { weekday: 'long' })} במערכת הבסיס
+                    </p>
+                  </div>
+
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((hour) => (
+                    <div key={hour}>
+                      <label className="block text-sm font-medium mb-1 text-foreground">
+                        שעה {hour}
+                      </label>
+                      <Input
+                        value={hourContents[hour] || ''}
+                        onChange={(e) =>
+                          setHourContents((prev) => ({ ...prev, [hour]: e.target.value }))
+                        }
+                        placeholder="תוכן השעה"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
 
             {editMode === 'daily' && (
               <Card className="p-6 card-elevated">
