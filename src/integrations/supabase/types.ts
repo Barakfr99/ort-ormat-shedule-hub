@@ -79,6 +79,7 @@ export type Database = {
           date: string
           hour_number: number
           id: string
+          is_permanent: boolean
           override_text: string
           student_id: string
           updated_at: string | null
@@ -88,6 +89,7 @@ export type Database = {
           date: string
           hour_number: number
           id?: string
+          is_permanent?: boolean
           override_text: string
           student_id: string
           updated_at?: string | null
@@ -97,6 +99,7 @@ export type Database = {
           date?: string
           hour_number?: number
           id?: string
+          is_permanent?: boolean
           override_text?: string
           student_id?: string
           updated_at?: string | null

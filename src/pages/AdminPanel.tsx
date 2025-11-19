@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Save, Calendar as CalendarIcon, Upload } from 'lucide-react';
+import { ArrowRight, Save, Calendar as CalendarIcon, Upload, Download } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -26,7 +26,7 @@ export default function AdminPanel() {
   const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  const [editMode, setEditMode] = useState<'daily' | 'range' | 'permanent'>('daily');
+  const [editMode, setEditMode] = useState<'daily' | 'range'>('daily');
   const [permanentPassword, setPermanentPassword] = useState('');
   const [editDate, setEditDate] = useState<Date>(new Date());
   const [hourContents, setHourContents] = useState<{
@@ -87,45 +87,11 @@ export default function AdminPanel() {
         throw new Error('לא נבחרו תלמידים');
       }
 
-      // Handle permanent changes
-      if (editMode === 'permanent') {
-        if (permanentPassword !== '2002') {
-          throw new Error('סיסמה שגויה לשינוי קבוע');
-        }
-        let dayOfWeek = editDate.toLocaleDateString('he-IL', {
-          weekday: 'long'
-        });
-        // Remove 'יום ' prefix to match database format (e.g., 'יום ראשון' -> 'ראשון')
-        dayOfWeek = dayOfWeek.replace(/^יום\s+/, '');
-        for (const studentName of selectedStudents) {
-          // Fetch student_id from database
-          const {
-            data: studentData
-          } = await supabase.from('students').select('student_id').eq('name', studentName).single();
-          if (!studentData) continue;
-          for (let hour = 1; hour <= 8; hour++) {
-            const content = hourContents[hour];
-            if (content !== undefined && content.trim() !== '') {
-              const {
-                data: existing
-              } = await supabase.from('base_schedule').select('id').eq('student_id', studentData.student_id).eq('day', dayOfWeek).eq('hour_number', hour).single();
-              if (existing) {
-                await supabase.from('base_schedule').update({
-                  content
-                }).eq('id', existing.id);
-              } else {
-                await supabase.from('base_schedule').insert({
-                  student_id: studentData.student_id,
-                  day: dayOfWeek,
-                  hour_number: hour,
-                  content
-                });
-              }
-            }
-          }
-        }
-        return;
+      // Check permanent password if permanent change
+      if (isPermanentChange && permanentPassword !== '2002') {
+        throw new Error('סיסמה שגויה לשינוי קבוע');
       }
+
       const updates = [];
       if (editMode === 'daily') {
         // Daily schedule editing
@@ -142,7 +108,7 @@ export default function AdminPanel() {
             }
           }
         }
-      } else {
+      } else if (editMode === 'range') {
         // Range update
         const start = isFullDay ? 1 : parseInt(rangeStart);
         const end = isFullDay ? 8 : parseInt(rangeEnd);
@@ -162,10 +128,17 @@ export default function AdminPanel() {
           }
         }
       }
+
       if (updates.length > 0) {
+        // Add is_permanent flag based on isPermanentChange
+        const updatesWithPermanentFlag = updates.map(update => ({
+          ...update,
+          is_permanent: isPermanentChange
+        }));
+        
         const {
           error: overridesError
-        } = await supabase.from('schedule_overrides').upsert(updates, {
+        } = await supabase.from('schedule_overrides').upsert(updatesWithPermanentFlag, {
           onConflict: 'student_id,date,hour_number'
         });
         if (overridesError) throw overridesError;
@@ -196,7 +169,7 @@ export default function AdminPanel() {
       });
       setSuccessMessage({
         title: 'השינויים נשמרו בהצלחה',
-        description: editMode === 'permanent' ? `השינויים הקבועים עבור ${selectedStudents.length} תלמידים נשמרו במערכת הבסיס` : `השינויים עבור ${selectedStudents.length} תלמידים נשמרו במערכת`
+        description: `השינויים עבור ${selectedStudents.length} תלמידים נשמרו במערכת`
       });
       setShowSuccessDialog(true);
       queryClient.invalidateQueries({
@@ -262,22 +235,70 @@ export default function AdminPanel() {
       setShowSuccessDialog(true);
     }
   });
+
+  const exportExcelMutation = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke('export-updated-excel');
+      
+      if (error) throw error;
+      
+      // Create a blob from the response and download it
+      const blob = new Blob([data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `מערכת_מעודכנת_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    },
+    onSuccess: () => {
+      setSuccessMessage({
+        title: 'הייצוא הושלם בהצלחה',
+        description: 'קובץ האקסל המעודכן הורד למחשב שלך'
+      });
+      setShowSuccessDialog(true);
+    },
+    onError: (error: Error) => {
+      console.error('שגיאה בייצוא', error);
+      setSuccessMessage({
+        title: 'שגיאה בייצוא אקסל',
+        description: error.message || 'נסה שוב'
+      });
+      setShowSuccessDialog(true);
+    }
+  });
+
   return <div className="min-h-screen flex flex-col bg-background">
       <Header title="ניהול מערכות – אורט אורמת" />
 
       <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
-        <Button variant="outline" onClick={() => navigate('/upload-excel')} className="mb-6">
-          <Upload className="ml-2 h-4 w-4" />
-          העלאת קובץ אקסל
-        </Button>
-        
-        <Button variant="outline" onClick={() => {
-        sessionStorage.removeItem('adminAuth');
-        navigate('/');
-      }} className="mb-6 mr-4">
-          <ArrowRight className="ml-2 h-4 w-4" />
-          התנתק וחזור
-        </Button>
+        <div className="flex gap-4 mb-6 flex-wrap">
+          <Button variant="outline" onClick={() => navigate('/upload-excel')}>
+            <Upload className="ml-2 h-4 w-4" />
+            העלאת קובץ אקסל
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            onClick={() => exportExcelMutation.mutate()}
+            disabled={exportExcelMutation.isPending}
+          >
+            <Download className="ml-2 h-4 w-4" />
+            {exportExcelMutation.isPending ? 'מייצא...' : 'ייצוא מערכת מעודכנת'}
+          </Button>
+          
+          <Button variant="outline" onClick={() => {
+            sessionStorage.removeItem('adminAuth');
+            navigate('/');
+          }}>
+            <ArrowRight className="ml-2 h-4 w-4" />
+            התנתק וחזור
+          </Button>
+        </div>
 
         <div className="space-y-6">
           <Card className="p-6 card-elevated">
@@ -336,7 +357,7 @@ export default function AdminPanel() {
             <Card className="p-6 card-elevated">
               <h3 className="text-xl font-bold mb-4 text-foreground">בחר סוג עריכה</h3>
               
-              <RadioGroup value={editMode} onValueChange={(value: 'daily' | 'range' | 'permanent') => setEditMode(value)}>
+              <RadioGroup value={editMode} onValueChange={(value: 'daily' | 'range') => setEditMode(value)}>
                 <div className="flex items-center space-x-2 space-x-reverse mb-2">
                   <RadioGroupItem value="daily" id="daily" />
                   <Label htmlFor="daily" className="cursor-pointer">עריכת מערכת לפי יום</Label>
@@ -345,59 +366,8 @@ export default function AdminPanel() {
                   <RadioGroupItem value="range" id="range" />
                   <Label htmlFor="range" className="cursor-pointer">עדכון טווח שעות</Label>
                 </div>
-                <div className="flex items-center space-x-2 space-x-reverse">
-                  <RadioGroupItem value="permanent" id="permanent" />
-                  <Label htmlFor="permanent" className="cursor-pointer text-destructive font-semibold">שינוי קבוע במערכת הבסיס</Label>
-                </div>
               </RadioGroup>
             </Card>
-
-            {editMode === 'permanent' && <Card className="p-6 card-elevated border-destructive">
-                <h3 className="text-xl font-bold mb-4 text-destructive">שינוי קבוע במערכת הבסיס</h3>
-                
-                <div className="bg-destructive/10 border border-destructive rounded-lg p-4 mb-4">
-                  <p className="text-sm text-destructive font-medium">
-                    ⚠️ אזהרה: שינוי זה ישנה את מערכת הבסיס באופן קבוע עבור יום זה בשבוע
-                  </p>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-foreground">סיסמה לשינוי קבוע</label>
-                    <Input type="password" value={permanentPassword} onChange={e => setPermanentPassword(e.target.value)} placeholder="הזן סיסמה" className="text-right" />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-2 text-foreground">תאריך (יום בשבוע)</label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="outline" className="w-full justify-start text-right">
-                          <CalendarIcon className="ml-2 h-4 w-4" />
-                          {formatDate(editDate)}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={editDate} onSelect={date => date && setEditDate(date)} className="pointer-events-auto" />
-                      </PopoverContent>
-                    </Popover>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      השינוי יחול על כל {editDate.toLocaleDateString('he-IL', {
-                  weekday: 'long'
-                })} במערכת הבסיס
-                    </p>
-                  </div>
-
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(hour => <div key={hour}>
-                      <label className="block text-sm font-medium mb-1 text-foreground">
-                        שעה {hour}
-                      </label>
-                      <Input value={hourContents[hour] || ''} onChange={e => setHourContents(prev => ({
-                ...prev,
-                [hour]: e.target.value
-              }))} placeholder="תוכן השעה" />
-                    </div>)}
-                </div>
-              </Card>}
 
             {editMode === 'daily' && <Card className="p-6 card-elevated">
                 <h3 className="text-xl font-bold mb-4 text-foreground">עריכת מערכת לפי יום</h3>
