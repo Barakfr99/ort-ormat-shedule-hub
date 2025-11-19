@@ -17,33 +17,34 @@ import { useScheduleData } from '@/hooks/useScheduleData';
 import { formatDate, formatDateForDB } from '@/lib/excelParser';
 import { supabase } from '@/integrations/supabase/client';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-
 export default function AdminPanel() {
   const navigate = useNavigate();
-  const { data } = useScheduleData();
+  const {
+    data
+  } = useScheduleData();
   const queryClient = useQueryClient();
-
   const [selectedGrade, setSelectedGrade] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
-  
   const [editMode, setEditMode] = useState<'daily' | 'range' | 'permanent'>('daily');
   const [permanentPassword, setPermanentPassword] = useState('');
   const [editDate, setEditDate] = useState<Date>(new Date());
-  const [hourContents, setHourContents] = useState<{ [key: number]: string }>({});
-  
+  const [hourContents, setHourContents] = useState<{
+    [key: number]: string;
+  }>({});
   const [rangeText, setRangeText] = useState('');
   const [rangeStart, setRangeStart] = useState('1');
   const [rangeEnd, setRangeEnd] = useState('8');
   const [rangeDates, setRangeDates] = useState<Date[]>([new Date()]);
   const [isFullDay, setIsFullDay] = useState(false);
-  
   const [shouldSetResetDate, setShouldSetResetDate] = useState(false);
   const [isPermanentChange, setIsPermanentChange] = useState(false);
   const [resetDate, setResetDate] = useState<Date>(new Date());
-  
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
-  const [successMessage, setSuccessMessage] = useState({ title: '', description: '' });
+  const [successMessage, setSuccessMessage] = useState({
+    title: '',
+    description: ''
+  });
 
   // Update reset date default when edit mode or dates change
   useEffect(() => {
@@ -51,13 +52,10 @@ export default function AdminPanel() {
       setResetDate(editDate);
     } else if (editMode === 'range' && rangeDates.length > 0) {
       // Set to the latest date in the range
-      const latestDate = rangeDates.reduce((latest, current) => 
-        current > latest ? current : latest, rangeDates[0]
-      );
+      const latestDate = rangeDates.reduce((latest, current) => current > latest ? current : latest, rangeDates[0]);
       setResetDate(latestDate);
     }
   }, [editMode, editDate, rangeDates]);
-
   useEffect(() => {
     const isAuth = sessionStorage.getItem('adminAuth');
     if (!isAuth) {
@@ -75,29 +73,14 @@ export default function AdminPanel() {
   useEffect(() => {
     setSelectedStudents([]);
   }, [selectedClass]);
-
-  const filteredClasses = selectedGrade
-    ? data?.classes.filter((c) => c.startsWith(selectedGrade))
-    : data?.classes || [];
-
-  const filteredStudents = selectedClass
-    ? data?.students.filter((s) => s.class === selectedClass).sort((a, b) => a.name.localeCompare(b.name, 'he'))
-    : selectedGrade
-    ? data?.students.filter((s) => s.grade === selectedGrade).sort((a, b) => a.name.localeCompare(b.name, 'he'))
-    : data?.students.sort((a, b) => a.name.localeCompare(b.name, 'he')) || [];
-
+  const filteredClasses = selectedGrade ? data?.classes.filter(c => c.startsWith(selectedGrade)) : data?.classes || [];
+  const filteredStudents = selectedClass ? data?.students.filter(s => s.class === selectedClass).sort((a, b) => a.name.localeCompare(b.name, 'he')) : selectedGrade ? data?.students.filter(s => s.grade === selectedGrade).sort((a, b) => a.name.localeCompare(b.name, 'he')) : data?.students.sort((a, b) => a.name.localeCompare(b.name, 'he')) || [];
   const toggleStudent = (studentName: string) => {
-    setSelectedStudents((prev) =>
-      prev.includes(studentName)
-        ? prev.filter((s) => s !== studentName)
-        : [...prev, studentName]
-    );
+    setSelectedStudents(prev => prev.includes(studentName) ? prev.filter(s => s !== studentName) : [...prev, studentName]);
   };
-
   const selectAllStudents = () => {
-    setSelectedStudents(filteredStudents.map((s) => s.name));
+    setSelectedStudents(filteredStudents.map(s => s.name));
   };
-
   const saveChangesMutation = useMutation({
     mutationFn: async () => {
       if (selectedStudents.length === 0) {
@@ -109,53 +92,39 @@ export default function AdminPanel() {
         if (permanentPassword !== '2002') {
           throw new Error('סיסמה שגויה לשינוי קבוע');
         }
-
-        const dayOfWeek = editDate.toLocaleDateString('en-US', { weekday: 'long' });
-
+        const dayOfWeek = editDate.toLocaleDateString('en-US', {
+          weekday: 'long'
+        });
         for (const studentName of selectedStudents) {
           // Fetch student_id from database
-          const { data: studentData } = await supabase
-            .from('students')
-            .select('student_id')
-            .eq('name', studentName)
-            .single();
-
+          const {
+            data: studentData
+          } = await supabase.from('students').select('student_id').eq('name', studentName).single();
           if (!studentData) continue;
-
           for (let hour = 1; hour <= 8; hour++) {
             const content = hourContents[hour];
             if (content !== undefined && content.trim() !== '') {
-              const { data: existing } = await supabase
-                .from('base_schedule')
-                .select('id')
-                .eq('student_id', studentData.student_id)
-                .eq('day', dayOfWeek)
-                .eq('hour_number', hour)
-                .single();
-
+              const {
+                data: existing
+              } = await supabase.from('base_schedule').select('id').eq('student_id', studentData.student_id).eq('day', dayOfWeek).eq('hour_number', hour).single();
               if (existing) {
-                await supabase
-                  .from('base_schedule')
-                  .update({ content })
-                  .eq('id', existing.id);
+                await supabase.from('base_schedule').update({
+                  content
+                }).eq('id', existing.id);
               } else {
-                await supabase
-                  .from('base_schedule')
-                  .insert({
-                    student_id: studentData.student_id,
-                    day: dayOfWeek,
-                    hour_number: hour,
-                    content,
-                  });
+                await supabase.from('base_schedule').insert({
+                  student_id: studentData.student_id,
+                  day: dayOfWeek,
+                  hour_number: hour,
+                  content
+                });
               }
             }
           }
         }
         return;
       }
-
       const updates = [];
-      
       if (editMode === 'daily') {
         // Daily schedule editing
         for (const studentName of selectedStudents) {
@@ -166,7 +135,7 @@ export default function AdminPanel() {
                 student_id: studentName,
                 date: formatDateForDB(editDate),
                 hour_number: hour,
-                override_text: content,
+                override_text: content
               });
             }
           }
@@ -175,11 +144,9 @@ export default function AdminPanel() {
         // Range update
         const start = isFullDay ? 1 : parseInt(rangeStart);
         const end = isFullDay ? 8 : parseInt(rangeEnd);
-        
         if (!isFullDay && (isNaN(start) || isNaN(end) || start < 1 || end > 8 || start > end)) {
           throw new Error('טווח שעות לא תקין');
         }
-
         for (const studentName of selectedStudents) {
           for (const date of rangeDates) {
             for (let hour = start; hour <= end; hour++) {
@@ -187,59 +154,58 @@ export default function AdminPanel() {
                 student_id: studentName,
                 date: formatDateForDB(date),
                 hour_number: hour,
-                override_text: rangeText,
+                override_text: rangeText
               });
             }
           }
         }
       }
-
       if (updates.length > 0) {
-        const { error: overridesError } = await supabase
-          .from('schedule_overrides')
-          .upsert(updates, {
-            onConflict: 'student_id,date,hour_number',
-          });
-
+        const {
+          error: overridesError
+        } = await supabase.from('schedule_overrides').upsert(updates, {
+          onConflict: 'student_id,date,hour_number'
+        });
         if (overridesError) throw overridesError;
       }
 
       // Handle reset date if not permanent change
       if (!isPermanentChange && shouldSetResetDate) {
-        const resetUpdates = selectedStudents.map((studentName) => ({
+        const resetUpdates = selectedStudents.map(studentName => ({
           student_id: studentName,
-          reset_date: formatDateForDB(resetDate),
+          reset_date: formatDateForDB(resetDate)
         }));
-
-        const { error: resetError } = await supabase
-          .from('reset_dates')
-          .upsert(resetUpdates, {
-            onConflict: 'student_id',
-          });
-
+        const {
+          error: resetError
+        } = await supabase.from('reset_dates').upsert(resetUpdates, {
+          onConflict: 'student_id'
+        });
         if (resetError) throw resetError;
       } else if (isPermanentChange) {
         // If permanent change, delete any existing reset dates
         for (const studentName of selectedStudents) {
-          await supabase
-            .from('reset_dates')
-            .delete()
-            .eq('student_id', studentName);
+          await supabase.from('reset_dates').delete().eq('student_id', studentName);
         }
       }
     },
     onSuccess: () => {
-      console.log('שמירת שינויים הושלמה', { selectedStudents: selectedStudents.length });
+      console.log('שמירת שינויים הושלמה', {
+        selectedStudents: selectedStudents.length
+      });
       setSuccessMessage({
         title: 'השינויים נשמרו בהצלחה',
-        description: editMode === 'permanent' 
-          ? `השינויים הקבועים עבור ${selectedStudents.length} תלמידים נשמרו במערכת הבסיס`
-          : `השינויים עבור ${selectedStudents.length} תלמידים נשמרו במערכת`
+        description: editMode === 'permanent' ? `השינויים הקבועים עבור ${selectedStudents.length} תלמידים נשמרו במערכת הבסיס` : `השינויים עבור ${selectedStudents.length} תלמידים נשמרו במערכת`
       });
       setShowSuccessDialog(true);
-      queryClient.invalidateQueries({ queryKey: ['overrides'] });
-      queryClient.invalidateQueries({ queryKey: ['resetDate'] });
-      queryClient.invalidateQueries({ queryKey: ['scheduleData'] });
+      queryClient.invalidateQueries({
+        queryKey: ['overrides']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['resetDate']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['scheduleData']
+      });
       setHourContents({});
       setRangeText('');
       setPermanentPassword('');
@@ -251,38 +217,39 @@ export default function AdminPanel() {
         description: error.message || 'נסה שוב'
       });
       setShowSuccessDialog(true);
-    },
+    }
   });
-
   const resetToBaseMutation = useMutation({
     mutationFn: async () => {
       // Delete all overrides for selected students
       for (const studentName of selectedStudents) {
-        const { error: overridesError } = await supabase
-          .from('schedule_overrides')
-          .delete()
-          .eq('student_id', studentName);
-
+        const {
+          error: overridesError
+        } = await supabase.from('schedule_overrides').delete().eq('student_id', studentName);
         if (overridesError) throw overridesError;
 
         // Delete reset date
-        const { error: resetError } = await supabase
-          .from('reset_dates')
-          .delete()
-          .eq('student_id', studentName);
-
+        const {
+          error: resetError
+        } = await supabase.from('reset_dates').delete().eq('student_id', studentName);
         if (resetError) throw resetError;
       }
     },
     onSuccess: () => {
-      console.log('איפוס בוצע בהצלחה', { selectedStudents: selectedStudents.length });
+      console.log('איפוס בוצע בהצלחה', {
+        selectedStudents: selectedStudents.length
+      });
       setSuccessMessage({
         title: 'האיפוס בוצע בהצלחה',
         description: `${selectedStudents.length} תלמידים אופסו למערכת הבסיס`
       });
       setShowSuccessDialog(true);
-      queryClient.invalidateQueries({ queryKey: ['overrides'] });
-      queryClient.invalidateQueries({ queryKey: ['resetDate'] });
+      queryClient.invalidateQueries({
+        queryKey: ['overrides']
+      });
+      queryClient.invalidateQueries({
+        queryKey: ['resetDate']
+      });
     },
     onError: (error: Error) => {
       console.error('שגיאה באיפוס', error);
@@ -291,31 +258,21 @@ export default function AdminPanel() {
         description: error.message || 'נסה שוב'
       });
       setShowSuccessDialog(true);
-    },
+    }
   });
-
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
+  return <div className="min-h-screen flex flex-col bg-background">
       <Header title="ניהול מערכות – אורט אורמת" />
 
       <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
-        <Button
-          variant="outline"
-          onClick={() => navigate('/upload-excel')}
-          className="mb-6"
-        >
+        <Button variant="outline" onClick={() => navigate('/upload-excel')} className="mb-6">
           <Upload className="ml-2 h-4 w-4" />
           העלאת קובץ אקסל
         </Button>
         
-        <Button
-          variant="outline"
-          onClick={() => {
-            sessionStorage.removeItem('adminAuth');
-            navigate('/');
-          }}
-          className="mb-6 mr-4"
-        >
+        <Button variant="outline" onClick={() => {
+        sessionStorage.removeItem('adminAuth');
+        navigate('/');
+      }} className="mb-6 mr-4">
           <ArrowRight className="ml-2 h-4 w-4" />
           התנתק וחזור
         </Button>
@@ -331,11 +288,9 @@ export default function AdminPanel() {
                       <SelectValue placeholder="בחר שכבה" />
                     </SelectTrigger>
                     <SelectContent>
-                      {data?.grades.map((grade) => (
-                        <SelectItem key={grade} value={grade}>
+                      {data?.grades.map(grade => <SelectItem key={grade} value={grade}>
                           {grade}
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -347,18 +302,15 @@ export default function AdminPanel() {
                       <SelectValue placeholder="בחר כיתה" />
                     </SelectTrigger>
                     <SelectContent>
-                      {filteredClasses.map((className) => (
-                        <SelectItem key={className} value={className}>
+                      {filteredClasses.map(className => <SelectItem key={className} value={className}>
                           {className}
-                        </SelectItem>
-                      ))}
+                        </SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
-              {filteredStudents.length > 0 && (
-                <div className="mt-4">
+              {filteredStudents.length > 0 && <div className="mt-4">
                   <div className="flex items-center justify-between mb-3">
                     <label className="text-sm font-medium text-foreground">תלמידים</label>
                     <Button variant="outline" size="sm" onClick={selectAllStudents}>
@@ -366,23 +318,17 @@ export default function AdminPanel() {
                     </Button>
                   </div>
                   <div className="grid md:grid-cols-2 gap-3 max-h-60 overflow-y-auto border rounded-lg p-3">
-                    {filteredStudents.map((student) => (
-                      <div key={student.name} className="flex items-center gap-2">
-                        <Checkbox
-                          checked={selectedStudents.includes(student.name)}
-                          onCheckedChange={() => toggleStudent(student.name)}
-                        />
+                    {filteredStudents.map(student => <div key={student.name} className="flex items-center gap-2">
+                        <Checkbox checked={selectedStudents.includes(student.name)} onCheckedChange={() => toggleStudent(student.name)} />
                         <label className="text-sm text-foreground cursor-pointer">
                           {student.name}
                         </label>
-                      </div>
-                    ))}
+                      </div>)}
                   </div>
                   <p className="text-sm text-muted-foreground mt-2">
                     נבחרו {selectedStudents.length} תלמידים
                   </p>
-                </div>
-              )}
+                </div>}
             </Card>
 
             <Card className="p-6 card-elevated">
@@ -404,8 +350,7 @@ export default function AdminPanel() {
               </RadioGroup>
             </Card>
 
-            {editMode === 'permanent' && (
-              <Card className="p-6 card-elevated border-destructive">
+            {editMode === 'permanent' && <Card className="p-6 card-elevated border-destructive">
                 <h3 className="text-xl font-bold mb-4 text-destructive">שינוי קבוע במערכת הבסיס</h3>
                 
                 <div className="bg-destructive/10 border border-destructive rounded-lg p-4 mb-4">
@@ -417,13 +362,7 @@ export default function AdminPanel() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium mb-2 text-foreground">סיסמה לשינוי קבוע</label>
-                    <Input
-                      type="password"
-                      value={permanentPassword}
-                      onChange={(e) => setPermanentPassword(e.target.value)}
-                      placeholder="הזן סיסמה"
-                      className="text-right"
-                    />
+                    <Input type="password" value={permanentPassword} onChange={e => setPermanentPassword(e.target.value)} placeholder="הזן סיסמה" className="text-right" />
                   </div>
 
                   <div>
@@ -436,39 +375,29 @@ export default function AdminPanel() {
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="single"
-                          selected={editDate}
-                          onSelect={(date) => date && setEditDate(date)}
-                          className="pointer-events-auto"
-                        />
+                        <Calendar mode="single" selected={editDate} onSelect={date => date && setEditDate(date)} className="pointer-events-auto" />
                       </PopoverContent>
                     </Popover>
                     <p className="text-xs text-muted-foreground mt-1">
-                      השינוי יחול על כל {editDate.toLocaleDateString('he-IL', { weekday: 'long' })} במערכת הבסיס
+                      השינוי יחול על כל {editDate.toLocaleDateString('he-IL', {
+                  weekday: 'long'
+                })} במערכת הבסיס
                     </p>
                   </div>
 
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((hour) => (
-                    <div key={hour}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map(hour => <div key={hour}>
                       <label className="block text-sm font-medium mb-1 text-foreground">
                         שעה {hour}
                       </label>
-                      <Input
-                        value={hourContents[hour] || ''}
-                        onChange={(e) =>
-                          setHourContents((prev) => ({ ...prev, [hour]: e.target.value }))
-                        }
-                        placeholder="תוכן השעה"
-                      />
-                    </div>
-                  ))}
+                      <Input value={hourContents[hour] || ''} onChange={e => setHourContents(prev => ({
+                ...prev,
+                [hour]: e.target.value
+              }))} placeholder="תוכן השעה" />
+                    </div>)}
                 </div>
-              </Card>
-            )}
+              </Card>}
 
-            {editMode === 'daily' && (
-              <Card className="p-6 card-elevated">
+            {editMode === 'daily' && <Card className="p-6 card-elevated">
                 <h3 className="text-xl font-bold mb-4 text-foreground">עריכת מערכת לפי יום</h3>
                 
                 <div className="mb-4">
@@ -481,37 +410,25 @@ export default function AdminPanel() {
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={editDate}
-                        onSelect={(date) => date && setEditDate(date)}
-                        className="pointer-events-auto"
-                      />
+                      <Calendar mode="single" selected={editDate} onSelect={date => date && setEditDate(date)} className="pointer-events-auto" />
                     </PopoverContent>
                   </Popover>
                 </div>
 
                 <div className="space-y-3">
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((hour) => (
-                    <div key={hour}>
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map(hour => <div key={hour}>
                       <label className="block text-sm font-medium mb-1 text-foreground">
                         שעה {hour}
                       </label>
-                      <Input
-                        value={hourContents[hour] || ''}
-                        onChange={(e) =>
-                          setHourContents((prev) => ({ ...prev, [hour]: e.target.value }))
-                        }
-                        placeholder="תוכן השעה"
-                      />
-                    </div>
-                  ))}
+                      <Input value={hourContents[hour] || ''} onChange={e => setHourContents(prev => ({
+                ...prev,
+                [hour]: e.target.value
+              }))} placeholder="תוכן השעה" />
+                    </div>)}
                 </div>
-              </Card>
-            )}
+              </Card>}
 
-            {editMode === 'range' && (
-              <Card className="p-6 card-elevated">
+            {editMode === 'range' && <Card className="p-6 card-elevated">
                 <h3 className="text-xl font-bold mb-4 text-foreground">עדכון טווח שעות</h3>
                 
                 <div className="space-y-4">
@@ -519,11 +436,7 @@ export default function AdminPanel() {
                     <label className="block text-sm font-medium mb-2 text-foreground">
                       טקסט לשעות
                     </label>
-                    <Input
-                      value={rangeText}
-                      onChange={(e) => setRangeText(e.target.value)}
-                      placeholder="הכנס טקסט"
-                    />
+                    <Input value={rangeText} onChange={e => setRangeText(e.target.value)} placeholder="הכנס טקסט" />
                   </div>
 
                   <div>
@@ -532,36 +445,23 @@ export default function AdminPanel() {
                       <PopoverTrigger asChild>
                         <Button variant="outline" className="w-full justify-start text-right">
                           <CalendarIcon className="ml-2 h-4 w-4" />
-                          {rangeDates.length === 1 
-                            ? formatDate(rangeDates[0])
-                            : `${rangeDates.length} ימים נבחרו`
-                          }
+                          {rangeDates.length === 1 ? formatDate(rangeDates[0]) : `${rangeDates.length} ימים נבחרו`}
                         </Button>
                       </PopoverTrigger>
                       <PopoverContent className="w-auto p-0">
-                        <Calendar
-                          mode="multiple"
-                          selected={rangeDates}
-                          onSelect={(dates) => dates && setRangeDates(dates)}
-                          className="pointer-events-auto"
-                        />
+                        <Calendar mode="multiple" selected={rangeDates} onSelect={dates => dates && setRangeDates(dates)} className="pointer-events-auto" />
                       </PopoverContent>
                     </Popover>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Checkbox
-                      checked={isFullDay}
-                      onCheckedChange={(checked) => setIsFullDay(checked === true)}
-                      id="full-day"
-                    />
+                    <Checkbox checked={isFullDay} onCheckedChange={checked => setIsFullDay(checked === true)} id="full-day" />
                     <label htmlFor="full-day" className="text-sm font-medium text-foreground cursor-pointer">
                       יום מלא (כל 8 השעות)
                     </label>
                   </div>
 
-                  {!isFullDay && (
-                    <div className="grid grid-cols-2 gap-4">
+                  {!isFullDay && <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium mb-2 text-foreground">
                           מ-שעה
@@ -571,11 +471,9 @@ export default function AdminPanel() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
-                              <SelectItem key={h} value={h.toString()}>
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map(h => <SelectItem key={h} value={h.toString()}>
                                 {h}
-                              </SelectItem>
-                            ))}
+                              </SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
@@ -589,52 +487,38 @@ export default function AdminPanel() {
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {[1, 2, 3, 4, 5, 6, 7, 8].map((h) => (
-                              <SelectItem key={h} value={h.toString()}>
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map(h => <SelectItem key={h} value={h.toString()}>
                                 {h}
-                              </SelectItem>
-                            ))}
+                              </SelectItem>)}
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-                  )}
+                    </div>}
                 </div>
-              </Card>
-            )}
+              </Card>}
 
             <Card className="p-6 card-elevated">
               <h3 className="text-xl font-bold mb-4 text-foreground">הגדרות איפוס</h3>
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={isPermanentChange}
-                    onCheckedChange={(checked) => {
-                      setIsPermanentChange(checked === true);
-                      if (checked) setShouldSetResetDate(false);
-                    }}
-                    id="permanent-change"
-                  />
+                  <Checkbox checked={isPermanentChange} onCheckedChange={checked => {
+                setIsPermanentChange(checked === true);
+                if (checked) setShouldSetResetDate(false);
+              }} id="permanent-change" />
                   <label htmlFor="permanent-change" className="text-sm font-medium text-foreground cursor-pointer">
                     שינוי מערכת קבוע (השינויים יישארו לצמיתות)
                   </label>
                 </div>
 
-                {!isPermanentChange && (
-                  <>
+                {!isPermanentChange && <>
                     <div className="flex items-center gap-2">
-                      <Checkbox
-                        checked={shouldSetResetDate}
-                        onCheckedChange={(checked) => setShouldSetResetDate(checked === true)}
-                        id="set-reset-date"
-                      />
+                      <Checkbox checked={shouldSetResetDate} onCheckedChange={checked => setShouldSetResetDate(checked === true)} id="set-reset-date" />
                       <label htmlFor="set-reset-date" className="text-sm font-medium text-foreground cursor-pointer">
                         הגדר תאריך איפוס (המערכת תחזור אוטומטית למערכת בסיס אחרי תאריך זה)
                       </label>
                     </div>
 
-                    {shouldSetResetDate && (
-                      <div>
+                    {shouldSetResetDate && <div>
                         <label className="block text-sm font-medium mb-2 text-foreground">תאריך איפוס</label>
                         <p className="text-xs text-muted-foreground mb-2">
                           ברירת מחדל: בתום היום האחרון של השינוי
@@ -647,28 +531,13 @@ export default function AdminPanel() {
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent className="w-auto p-0">
-                            <Calendar
-                              mode="single"
-                              selected={resetDate}
-                              onSelect={(date) => date && setResetDate(date)}
-                              className="pointer-events-auto"
-                            />
+                            <Calendar mode="single" selected={resetDate} onSelect={date => date && setResetDate(date)} className="pointer-events-auto" />
                           </PopoverContent>
                         </Popover>
-                      </div>
-                    )}
-                  </>
-                )}
+                      </div>}
+                  </>}
 
-                <Button
-                  onClick={() => saveChangesMutation.mutate()}
-                  disabled={
-                    selectedStudents.length === 0 || 
-                    (editMode === 'range' && (!rangeText || rangeDates.length === 0)) ||
-                    saveChangesMutation.isPending
-                  }
-                  className="w-full gradient-primary"
-                >
+                <Button onClick={() => saveChangesMutation.mutate()} disabled={selectedStudents.length === 0 || editMode === 'range' && (!rangeText || rangeDates.length === 0) || saveChangesMutation.isPending} className="w-full gradient-primary">
                   <Save className="ml-2 h-4 w-4" />
                   שמור שינויים
                 </Button>
@@ -678,23 +547,16 @@ export default function AdminPanel() {
             <Card className="p-6 card-elevated">
               <h3 className="text-xl font-bold mb-4 text-foreground">איפוס למערכת בסיס</h3>
               <p className="text-muted-foreground mb-6">
-                מחיקת כל השינויים והחזרה למערכת הבסיס מהאקסל עבור התלמידים הנבחרים.
+                מחיקת כל השינויים והחזרה למערכת הבסיס עבור התלמידים הנבחרים.
               </p>
 
-              {selectedStudents.length > 0 && (
-                <div className="mb-4 p-4 bg-muted rounded-lg">
+              {selectedStudents.length > 0 && <div className="mb-4 p-4 bg-muted rounded-lg">
                   <p className="text-sm text-foreground">
                     נבחרו {selectedStudents.length} תלמידים
                   </p>
-                </div>
-              )}
+                </div>}
 
-              <Button
-                onClick={() => resetToBaseMutation.mutate()}
-                disabled={selectedStudents.length === 0 || resetToBaseMutation.isPending}
-                variant="destructive"
-                className="w-full"
-              >
+              <Button onClick={() => resetToBaseMutation.mutate()} disabled={selectedStudents.length === 0 || resetToBaseMutation.isPending} variant="destructive" className="w-full">
                 איפוס למערכת בסיס
               </Button>
             </Card>
@@ -711,14 +573,10 @@ export default function AdminPanel() {
             <AlertDialogDescription className="text-center text-lg text-muted-foreground mt-4">
               {successMessage.description}
             </AlertDialogDescription>
-            <AlertDialogAction 
-              onClick={() => setShowSuccessDialog(false)}
-              className="w-full mt-6 gradient-primary"
-            >
+            <AlertDialogAction onClick={() => setShowSuccessDialog(false)} className="w-full mt-6 gradient-primary">
               סגור
             </AlertDialogAction>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
-    );
-  }
+      </div>;
+}
