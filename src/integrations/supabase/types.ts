@@ -14,6 +14,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      base_schedule: {
+        Row: {
+          content: string
+          created_at: string | null
+          day: string
+          hour_number: number
+          id: string
+          student_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          day: string
+          hour_number: number
+          id?: string
+          student_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          day?: string
+          hour_number?: number
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_student"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["student_id"]
+          },
+        ]
+      }
       reset_dates: {
         Row: {
           created_at: string | null
@@ -63,6 +98,36 @@ export type Database = {
           hour_number?: number
           id?: string
           override_text?: string
+          student_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      students: {
+        Row: {
+          class: string
+          created_at: string | null
+          grade: string
+          id: string
+          name: string
+          student_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          class: string
+          created_at?: string | null
+          grade: string
+          id?: string
+          name: string
+          student_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          class?: string
+          created_at?: string | null
+          grade?: string
+          id?: string
+          name?: string
           student_id?: string
           updated_at?: string | null
         }
