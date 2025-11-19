@@ -31,12 +31,20 @@ export default function SelectSchedule() {
     if (stored.selectedStudent) setSelectedStudent(stored.selectedStudent);
   }, []);
 
+  // Filter classes by matching grade (handle various Hebrew formats)
   const filteredClasses = selectedGrade
-    ? data?.classes.filter((c) => c.startsWith(selectedGrade))
+    ? data?.classes.filter((c) => {
+        // Extract the grade part from class (before the space)
+        const classGrade = c.split(' ')[0];
+        return classGrade === selectedGrade;
+      })
     : data?.classes || [];
 
+  // Filter students by class, or by grade if only grade is selected
   const filteredStudents = selectedClass
     ? data?.students.filter((s) => s.class === selectedClass).sort((a, b) => a.name.localeCompare(b.name, 'he'))
+    : selectedGrade
+    ? data?.students.filter((s) => s.grade === selectedGrade).sort((a, b) => a.name.localeCompare(b.name, 'he'))
     : data?.students.sort((a, b) => a.name.localeCompare(b.name, 'he')) || [];
 
   const handleShowSchedule = () => {
