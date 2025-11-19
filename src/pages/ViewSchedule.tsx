@@ -55,23 +55,8 @@ export default function ViewSchedule() {
 
   const student = data?.students.find((s) => s.name === studentName);
 
-  // Get the actual student_id from the database
-  const { data: studentData } = useQuery({
-    queryKey: ['student', studentName],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('students')
-        .select('student_id')
-        .eq('name', studentName)
-        .maybeSingle();
-
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!studentName,
-  });
-
-  const studentId = studentData?.student_id;
+  // Use studentName directly as student_id (since we're using Excel as base)
+  const studentId = studentName;
 
   const { data: overrides } = useQuery({
     queryKey: ['overrides', studentId, formatDateForDB(currentDate)],
