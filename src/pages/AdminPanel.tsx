@@ -27,7 +27,8 @@ export default function AdminPanel() {
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStudents, setSelectedStudents] = useState<string[]>([]);
   
-  const [editMode, setEditMode] = useState<'daily' | 'range'>('daily');
+  const [editMode, setEditMode] = useState<'daily' | 'range' | 'permanent'>('daily');
+  const [permanentPassword, setPermanentPassword] = useState('');
   const [editDate, setEditDate] = useState<Date>(new Date());
   const [hourContents, setHourContents] = useState<{ [key: number]: string }>({});
   
