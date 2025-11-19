@@ -20,10 +20,11 @@ export function useScheduleData() {
 
         if (studentsError) throw studentsError;
 
-        // Fetch base schedule
+        // Fetch base schedule (remove default limit to get all records)
         const { data: scheduleData, error: scheduleError } = await supabase
           .from('base_schedule')
-          .select('*');
+          .select('*')
+          .limit(10000); // Increase limit to ensure we get all schedule data
 
         if (scheduleError) throw scheduleError;
 
