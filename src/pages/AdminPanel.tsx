@@ -92,7 +92,7 @@ export default function AdminPanel() {
         if (permanentPassword !== '2002') {
           throw new Error('סיסמה שגויה לשינוי קבוע');
         }
-        const dayOfWeek = editDate.toLocaleDateString('en-US', {
+        const dayOfWeek = editDate.toLocaleDateString('he-IL', {
           weekday: 'long'
         });
         for (const studentName of selectedStudents) {
