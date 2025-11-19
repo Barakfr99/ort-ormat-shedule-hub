@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ArrowRight, Calendar as CalendarWeekIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -55,34 +55,56 @@ export default function ViewSchedule() {
 
   const student = data?.students.find((s) => s.name === studentName);
 
-  const { data: overrides } = useQuery({
-    queryKey: ['overrides', studentName, formatDateForDB(currentDate)],
+  // Get the actual student_id from the database
+  const { data: studentData } = useQuery({
+    queryKey: ['student', studentName],
     queryFn: async () => {
+      const { data, error } = await supabase
+        .from('students')
+        .select('student_id')
+        .eq('name', studentName)
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!studentName,
+  });
+
+  const studentId = studentData?.student_id;
+
+  const { data: overrides } = useQuery({
+    queryKey: ['overrides', studentId, formatDateForDB(currentDate)],
+    queryFn: async () => {
+      if (!studentId) return [];
+      
       const { data, error } = await supabase
         .from('schedule_overrides')
         .select('*')
-        .eq('student_id', studentName)
+        .eq('student_id', studentId)
         .eq('date', formatDateForDB(currentDate));
 
       if (error) throw error;
       return data || [];
     },
-    enabled: !!studentName,
+    enabled: !!studentId,
   });
 
   const { data: resetDate } = useQuery({
-    queryKey: ['resetDate', studentName],
+    queryKey: ['resetDate', studentId],
     queryFn: async () => {
+      if (!studentId) return null;
+      
       const { data, error } = await supabase
         .from('reset_dates')
         .select('*')
-        .eq('student_id', studentName)
+        .eq('student_id', studentId)
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
       return data;
     },
-    enabled: !!studentName,
+    enabled: !!studentId,
   });
 
   const dailySchedule = student ? getStudentScheduleForDate(student, currentDate) : {};
