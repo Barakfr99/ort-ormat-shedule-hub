@@ -63,7 +63,7 @@ export default function ViewSchedule() {
         .from('students')
         .select('student_id')
         .eq('name', studentName)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
       return data;
@@ -99,7 +99,7 @@ export default function ViewSchedule() {
         .from('reset_dates')
         .select('*')
         .eq('student_id', studentId)
-        .single();
+        .maybeSingle();
 
       if (error && error.code !== 'PGRST116') throw error;
       return data;
