@@ -70,7 +70,7 @@ export default function SelectSchedule() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <Header title="מערכת שעות לתלמיד" />
+      <Header title="מערכת שעות- אורט אורמת" />
       
       <main className="flex-1 container mx-auto px-4 py-8 max-w-2xl">
         <Card className="p-6 md:p-8 card-elevated space-y-6">
