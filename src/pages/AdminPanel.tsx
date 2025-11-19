@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Save, Calendar as CalendarIcon } from 'lucide-react';
+import { ArrowRight, Save, Calendar as CalendarIcon, Upload } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -242,11 +242,20 @@ export default function AdminPanel() {
       <main className="flex-1 container mx-auto px-4 py-6 max-w-6xl">
         <Button
           variant="outline"
+          onClick={() => navigate('/upload-excel')}
+          className="mb-6"
+        >
+          <Upload className="ml-2 h-4 w-4" />
+          העלאת קובץ אקסל
+        </Button>
+        
+        <Button
+          variant="outline"
           onClick={() => {
             sessionStorage.removeItem('adminAuth');
             navigate('/');
           }}
-          className="mb-6"
+          className="mb-6 mr-4"
         >
           <ArrowRight className="ml-2 h-4 w-4" />
           התנתק וחזור
