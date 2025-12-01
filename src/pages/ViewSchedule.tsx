@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ArrowRight, CalendarDays } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -142,15 +142,26 @@ export default function ViewSchedule() {
 
       <main className="flex-1 container mx-auto px-2 sm:px-4 py-3 sm:py-6 max-w-4xl">
         <div className="mb-3 sm:mb-6 space-y-2 sm:space-y-4">
-          <Button 
-            variant="outline" 
-            onClick={() => navigate('/')}
-            className="w-full sm:w-auto text-sm"
-            size="sm"
-          >
-            <ArrowRight className="ml-2 h-4 w-4" />
-            חזור לבחירה
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate('/')}
+              className="text-sm"
+              size="sm"
+            >
+              <ArrowRight className="ml-2 h-4 w-4" />
+              חזור לבחירה
+            </Button>
+            <Button 
+              variant="secondary" 
+              onClick={() => navigate(`/weekly?student=${encodeURIComponent(studentName)}`)}
+              className="text-sm"
+              size="sm"
+            >
+              <CalendarDays className="ml-2 h-4 w-4" />
+              מערכת שבועית
+            </Button>
+          </div>
 
           <div className="flex items-center justify-between gap-2">
             <Button

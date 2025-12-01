@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import SelectSchedule from "./pages/SelectSchedule";
 import ViewSchedule from "./pages/ViewSchedule";
+import WeeklySchedule from "./pages/WeeklySchedule";
 import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
 import UploadExcel from "./pages/UploadExcel";
@@ -21,6 +22,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<SelectSchedule />} />
           <Route path="/schedule" element={<ViewSchedule />} />
+          <Route path="/weekly" element={<WeeklySchedule />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/upload-excel" element={<UploadExcel />} />
