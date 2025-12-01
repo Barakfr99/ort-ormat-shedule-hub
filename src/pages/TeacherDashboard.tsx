@@ -1073,15 +1073,15 @@ export default function TeacherDashboard() {
                           <th className="p-2 text-center font-semibold w-32">מוצדק</th>
                         </tr>
                       </thead>
-                      <tbody>
+                       <tbody>
                         {filteredAndSortedStudents.map((student) => (
                           <tr
                             key={`${student.studentName}-${student.studentClass}`}
                             className="border-b border-border"
                           >
-                            <td className="p-2">{student.studentName}</td>
-                            <td className="p-2 text-muted-foreground">{student.studentClass}</td>
-                            <td className="p-2">
+                            <td className="p-2 text-right">{student.studentName}</td>
+                            <td className="p-2 text-right text-muted-foreground">{student.studentClass}</td>
+                            <td className="p-2 text-center">
                               <div className="flex flex-col items-center gap-1">
                                 <Button
                                   type="button"
