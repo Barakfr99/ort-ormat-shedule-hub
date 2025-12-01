@@ -64,7 +64,18 @@ interface AttendanceEntry {
   isJustified: boolean;
 }
 
-type AttendanceRecordRow = Tables<"attendance_records">;
+interface AttendanceRecordRow {
+  id: string;
+  teacher_id: string;
+  student_name: string;
+  student_class: string;
+  student_grade: string;
+  date: string;
+  hour_number: number;
+  is_present: boolean;
+  is_justified: boolean;
+  created_at: string;
+}
 
 const DAY_NAMES = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
@@ -218,7 +229,7 @@ export default function TeacherDashboard() {
     queryFn: async () => {
       if (!teacherIdentifier) return [];
 
-      let query = supabase
+      let query = (supabase as any)
         .from("attendance_records")
         .select("*")
         .eq("teacher_id", teacherIdentifier);
@@ -251,7 +262,7 @@ export default function TeacherDashboard() {
         throw error;
       }
 
-      return data ?? [];
+      return (data ?? []) as unknown as AttendanceRecordRow[];
     },
   });
 
@@ -401,7 +412,7 @@ export default function TeacherDashboard() {
         is_justified: entry.isJustified,
       }));
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("attendance_records")
         .upsert(payload, {
           onConflict: "teacher_id,student_name,date,hour_number",
