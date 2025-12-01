@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      attendance_records: {
+        Row: {
+          created_at: string | null
+          date: string
+          hour_number: number
+          id: string
+          is_justified: boolean
+          is_present: boolean
+          student_class: string
+          student_grade: string
+          student_name: string
+          teacher_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          hour_number: number
+          id?: string
+          is_justified?: boolean
+          is_present?: boolean
+          student_class: string
+          student_grade: string
+          student_name: string
+          teacher_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          hour_number?: number
+          id?: string
+          is_justified?: boolean
+          is_present?: boolean
+          student_class?: string
+          student_grade?: string
+          student_name?: string
+          teacher_id?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       base_schedule: {
         Row: {
           content: string

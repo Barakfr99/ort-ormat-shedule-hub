@@ -10,6 +10,8 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminPanel from "./pages/AdminPanel";
 import UploadExcel from "./pages/UploadExcel";
 import NotFound from "./pages/NotFound";
+import TeacherLogin from "./pages/TeacherLogin";
+import TeacherDashboard from "./pages/TeacherDashboard";
 
 const queryClient = new QueryClient();
 
@@ -23,6 +25,8 @@ const App = () => (
           <Route path="/" element={<SelectSchedule />} />
           <Route path="/schedule" element={<ViewSchedule />} />
           <Route path="/weekly" element={<WeeklySchedule />} />
+          <Route path="/teacher-login" element={<TeacherLogin />} />
+          <Route path="/teacher" element={<TeacherDashboard />} />
           <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/admin" element={<AdminPanel />} />
           <Route path="/upload-excel" element={<UploadExcel />} />

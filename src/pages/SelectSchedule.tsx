@@ -199,13 +199,22 @@ export default function SelectSchedule() {
               הצג מערכת שבועית
             </Button>
 
-            <Button
-              variant="outline"
-              onClick={() => navigate('/admin-login')}
-              className="w-full mt-4"
-            >
-              כניסת מנהלים
-            </Button>
+            <div className="grid gap-3 sm:grid-cols-2 mt-4">
+              <Button
+                variant="outline"
+                onClick={() => navigate('/teacher-login')}
+                className="w-full"
+              >
+                כניסת מורים
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => navigate('/admin-login')}
+                className="w-full"
+              >
+                כניסת מנהלים
+              </Button>
+            </div>
           </div>
         </Card>
       </main>
