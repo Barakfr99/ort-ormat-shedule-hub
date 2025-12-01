@@ -200,6 +200,43 @@ export default function TeacherDashboard() {
 
   const teacherIdentifier = teacher?.idCode || teacher?.name || "";
 
+  // Query to check if attendance was filled for each lesson today
+  const { data: dailyAttendance = [] } = useQuery<AttendanceRecordRow[]>({
+    queryKey: ["dailyAttendance", teacherIdentifier, formattedDbDate],
+    enabled: Boolean(teacherIdentifier),
+    queryFn: async () => {
+      if (!teacherIdentifier) return [];
+      
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("*")
+        .eq("teacher_id", teacherIdentifier)
+        .eq("date", formattedDbDate);
+
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  // Query to load saved attendance for specific lesson when dialog opens
+  const { data: lessonAttendance = [], refetch: refetchLessonAttendance } = useQuery<AttendanceRecordRow[]>({
+    queryKey: ["lessonAttendance", teacherIdentifier, formattedDbDate, selectedSlot?.hour],
+    enabled: Boolean(teacherIdentifier && selectedSlot?.hour),
+    queryFn: async () => {
+      if (!teacherIdentifier || !selectedSlot?.hour) return [];
+      
+      const { data, error } = await supabase
+        .from("attendance_records")
+        .select("*")
+        .eq("teacher_id", teacherIdentifier)
+        .eq("date", formattedDbDate)
+        .eq("hour_number", selectedSlot.hour);
+
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
   const {
     data: attendanceReport = [],
     isLoading: attendanceReportLoading,
@@ -311,6 +348,18 @@ export default function TeacherDashboard() {
 
   const openStudentsDialog = (slot: TeacherLessonSlot) => {
     if (!slot.lesson) return;
+    
+    // Check if trying to open dialog for future date
+    const isFutureDate = currentDate > new Date(new Date().setHours(0, 0, 0, 0));
+    if (isFutureDate) {
+      toast({
+        title: "לא ניתן למלא נוכחות",
+        description: "ניתן למלא נוכחות רק עבור היום הנוכחי והתאריכים שלפניו.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setSelectedSlot(slot);
   };
 
@@ -378,6 +427,18 @@ export default function TeacherDashboard() {
 
   const handleSaveAttendance = async () => {
     if (!teacher || !selectedSlot?.lesson) return;
+    
+    // Check if trying to save attendance for future date
+    const isFutureDate = currentDate > new Date(new Date().setHours(0, 0, 0, 0));
+    if (isFutureDate) {
+      toast({
+        title: "לא ניתן למלא נוכחות",
+        description: "ניתן למלא נוכחות רק עבור היום הנוכחי והתאריכים שלפניו.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const entries = Object.values(attendanceState);
 
     if (entries.length === 0) {
@@ -415,6 +476,10 @@ export default function TeacherDashboard() {
         title: "הנוכחות נשמרה",
         description: "הנתונים עודכנו בהצלחה.",
       });
+      
+      // Refetch daily attendance to update the indicators
+      await refetchLessonAttendance();
+      closeDialog();
     } catch (error) {
       console.error("Failed to save attendance", error);
       toast({
@@ -458,18 +523,27 @@ export default function TeacherDashboard() {
     setReportToDate(normalized);
   };
 
+  // Load saved attendance data when dialog opens
   useEffect(() => {
     if (selectedSlot?.lesson) {
       const initialState: Record<string, AttendanceEntry> = {};
+      
+      // Create map of saved attendance records
+      const savedAttendanceMap = new Map(
+        lessonAttendance.map(record => [record.student_name, record])
+      );
+      
       selectedSlot.lesson.students.forEach((student) => {
+        const savedRecord = savedAttendanceMap.get(student.name);
         initialState[student.name] = {
           studentName: student.name,
           studentClass: student.class,
           studentGrade: student.grade,
-          isPresent: true,
-          isJustified: false,
+          isPresent: savedRecord ? savedRecord.is_present : true,
+          isJustified: savedRecord ? savedRecord.is_justified : false,
         };
       });
+      
       setAttendanceState(initialState);
       setSortField("name");
       setSortDirection("asc");
@@ -477,7 +551,7 @@ export default function TeacherDashboard() {
     } else {
       setAttendanceState({});
     }
-  }, [selectedSlot?.hour, selectedSlot?.lesson]);
+  }, [selectedSlot?.hour, selectedSlot?.lesson, lessonAttendance]);
 
   useEffect(() => {
     if (selectedClasses.length > 0) {
@@ -506,32 +580,65 @@ export default function TeacherDashboard() {
         </div>
 
         <Card className="p-4 sm:p-6 card-elevated mb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">מחובר/ת כמורה</p>
-              <h2 className="text-2xl font-bold text-foreground">{teacher.name}</h2>
-              <p className="text-muted-foreground flex items-center gap-2">
-                <Users className="h-4 w-4" />
-                {activeLessons.reduce((total, slot) => total + (slot.lesson?.students.length ?? 0), 0)}{" "}
-                תלמידים ביום הנוכחי
-              </p>
-            </div>
-
-            <div className="flex items-center justify-between gap-2 w-full">
-              <Button variant="secondary" size="sm" onClick={() => changeDate(-1)}>
-                <ChevronRight className="h-4 w-4" />
-                אתמול
-              </Button>
-
-              <div className="flex-1 text-center min-w-[140px]">
-                <p className="text-lg font-bold text-primary">{dayName}</p>
-                <p className="text-sm text-muted-foreground">{formatDate(currentDate)}</p>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">מחובר/ת כמורה</p>
+                <h2 className="text-2xl font-bold text-foreground">{teacher.name}</h2>
+                <p className="text-muted-foreground flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  {activeLessons.reduce((total, slot) => total + (slot.lesson?.students.length ?? 0), 0)}{" "}
+                  תלמידים ביום הנוכחי
+                </p>
               </div>
 
-              <Button variant="secondary" size="sm" onClick={() => changeDate(1)}>
-                מחר
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center justify-between gap-2 w-full">
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => changeDate(-1)}
+                  disabled={false}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                  אתמול
+                </Button>
+
+                <div className="flex-1 text-center min-w-[140px]">
+                  <p className="text-lg font-bold text-primary">{dayName}</p>
+                  <p className="text-sm text-muted-foreground">{formatDate(currentDate)}</p>
+                </div>
+
+                <Button 
+                  variant="secondary" 
+                  size="sm" 
+                  onClick={() => changeDate(1)}
+                  disabled={currentDate >= new Date(new Date().setHours(0, 0, 0, 0))}
+                >
+                  מחר
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="flex justify-center">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" size="sm" className="justify-center text-center">
+                    <CalendarIcon className="ml-2 h-4 w-4" />
+                    בחר תאריך אחר
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="center">
+                  <Calendar
+                    mode="single"
+                    selected={currentDate}
+                    onSelect={(date) => date && setCurrentDate(date)}
+                    disabled={(date) => date > new Date()}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
         </Card>
@@ -575,39 +682,53 @@ export default function TeacherDashboard() {
                       </tr>
                     </thead>
                     <tbody>
-                      {schedule.map((slot) => (
-                        <tr
-                          key={slot.hour}
-                          className={`border-b border-border align-middle ${
-                            slot.lesson ? "cursor-pointer hover:bg-muted/30" : ""
-                          }`}
-                          onClick={() => slot.lesson && openStudentsDialog(slot)}
-                        >
-                          <td className="p-3 text-right align-middle">
-                            {slot.lesson ? (
-                              <div className="space-y-1">
-                                <p className="font-semibold text-foreground">{slot.lesson.subject}</p>
-                                {slot.lesson.room && (
-                                  <p className="text-sm text-primary">חדר: {slot.lesson.room}</p>
-                                )}
-                                <p className="text-sm text-muted-foreground flex items-center justify-end gap-1 text-right">
-                                  <Users className="h-4 w-4" />
-                                  {slot.lesson.students.length} תלמידים משובצים
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  לחיצה על השעה תציג את רשימת התלמידים המלאה.
-                                </p>
-                              </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground italic text-center">אין שיעור</p>
-                            )}
-                          </td>
-                          <td className="p-2 text-center align-middle bg-muted/50">
-                            <div className="font-bold text-foreground">{slot.hour}</div>
-                            <div className="text-xs text-muted-foreground">{slot.time}</div>
-                          </td>
-                        </tr>
-                      ))}
+                      {schedule.map((slot) => {
+                        const hasAttendance = dailyAttendance.some(
+                          record => record.hour_number === slot.hour
+                        );
+                        const isFutureDate = currentDate > new Date(new Date().setHours(0, 0, 0, 0));
+                        
+                        return (
+                          <tr
+                            key={slot.hour}
+                            className={`border-b border-border align-middle ${
+                              slot.lesson ? "cursor-pointer hover:bg-muted/30" : ""
+                            }`}
+                            onClick={() => slot.lesson && openStudentsDialog(slot)}
+                          >
+                            <td className="p-3 text-right align-middle">
+                              {slot.lesson ? (
+                                <div className="space-y-1">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="font-semibold text-foreground">{slot.lesson.subject}</p>
+                                    {!hasAttendance && !isFutureDate && (
+                                      <span className="text-xs font-semibold text-red-500 bg-red-50 px-2 py-1 rounded">
+                                        טרם מולא נוכחות
+                                      </span>
+                                    )}
+                                  </div>
+                                  {slot.lesson.room && (
+                                    <p className="text-sm text-primary">חדר: {slot.lesson.room}</p>
+                                  )}
+                                  <p className="text-sm text-muted-foreground flex items-center justify-end gap-1 text-right">
+                                    <Users className="h-4 w-4" />
+                                    {slot.lesson.students.length} תלמידים משובצים
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    לחיצה על השעה תציג את רשימת התלמידים המלאה.
+                                  </p>
+                                </div>
+                              ) : (
+                                <p className="text-sm text-muted-foreground italic text-center">אין שיעור</p>
+                              )}
+                            </td>
+                            <td className="p-2 text-center align-middle bg-muted/50">
+                              <div className="font-bold text-foreground">{slot.hour}</div>
+                              <div className="text-xs text-muted-foreground">{slot.time}</div>
+                            </td>
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>
