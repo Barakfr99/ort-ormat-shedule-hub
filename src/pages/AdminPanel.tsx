@@ -232,14 +232,26 @@ export default function AdminPanel() {
 
   const exportExcelMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('export-updated-excel');
+      // Use direct fetch to get binary response properly
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
-      if (error) throw error;
-      
-      // Create a blob from the response and download it
-      const blob = new Blob([data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      const response = await fetch(`${supabaseUrl}/functions/v1/export-updated-excel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+        },
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP error: ${response.status}`);
+      }
+      
+      // Get the binary data as blob
+      const blob = await response.blob();
+      
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
