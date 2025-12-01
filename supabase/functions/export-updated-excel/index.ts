@@ -107,11 +107,14 @@ serve(async (req) => {
 
     console.log('Excel export completed successfully');
 
+    const dateStr = new Date().toISOString().split('T')[0];
+    const encodedFilename = encodeURIComponent(`מערכת_מעודכנת_${dateStr}.xlsx`);
+    
     return new Response(excelBuffer, {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="מערכת_מעודכנת_${new Date().toISOString().split('T')[0]}.xlsx"`,
+        'Content-Disposition': `attachment; filename="schedule_${dateStr}.xlsx"; filename*=UTF-8''${encodedFilename}`,
       },
     });
 
