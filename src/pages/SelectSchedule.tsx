@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { CalendarIcon, UserCircle2 } from 'lucide-react';
+import { CalendarIcon, UserCircle2, CalendarDays } from 'lucide-react';
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { saveToLocalStorage, getFromLocalStorage } from '@/lib/localStorage';
 import { formatDate } from '@/lib/excelParser';
@@ -63,6 +63,24 @@ export default function SelectSchedule() {
     });
 
     navigate(`/schedule?student=${encodeURIComponent(selectedStudent)}&date=${selectedDate.toISOString()}`);
+  };
+
+  const handleShowWeeklySchedule = () => {
+    if (!selectedStudent) {
+      toast({
+        title: 'אנא בחר תלמיד',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    saveToLocalStorage({
+      selectedGrade,
+      selectedClass,
+      selectedStudent,
+    });
+
+    navigate(`/weekly?student=${encodeURIComponent(selectedStudent)}`);
   };
 
   if (loading) {
@@ -169,7 +187,16 @@ export default function SelectSchedule() {
               onClick={handleShowSchedule} 
               className="w-full gradient-primary text-lg h-12 mt-6"
             >
-              הצג מערכת
+              הצג מערכת יומית
+            </Button>
+
+            <Button 
+              onClick={handleShowWeeklySchedule}
+              variant="secondary"
+              className="w-full text-lg h-12 mt-3"
+            >
+              <CalendarDays className="ml-2 h-5 w-5" />
+              הצג מערכת שבועית
             </Button>
 
             <Button
