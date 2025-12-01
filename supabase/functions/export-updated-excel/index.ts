@@ -24,22 +24,14 @@ serve(async (req) => {
     // Dynamically import xlsx
     const XLSX = await import('https://esm.sh/xlsx@0.18.5');
 
-    // Fetch the base Excel file from public storage
-    const baseExcelUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/data/students.xlsx`;
-    console.log('Fetching base Excel from:', baseExcelUrl);
+    // Fetch the base Excel file from Storage bucket
+    const baseExcelUrl = `${Deno.env.get('SUPABASE_URL')}/storage/v1/object/public/excel-files/students.xlsx`;
+    console.log('Fetching base Excel from Storage:', baseExcelUrl);
     
-    let baseExcelResponse;
-    try {
-      baseExcelResponse = await fetch(baseExcelUrl);
-      if (!baseExcelResponse.ok) {
-        // If file doesn't exist in storage, try local path
-        console.log('File not in storage, trying local path...');
-        const localUrl = new URL(req.url).origin + '/data/students.xlsx';
-        baseExcelResponse = await fetch(localUrl);
-      }
-    } catch (e) {
-      console.error('Error fetching Excel:', e);
-      throw new Error('Failed to fetch base Excel file');
+    const baseExcelResponse = await fetch(baseExcelUrl);
+    
+    if (!baseExcelResponse.ok) {
+      throw new Error(`Failed to fetch base Excel file: ${baseExcelResponse.status}`);
     }
 
     const arrayBuffer = await baseExcelResponse.arrayBuffer();
