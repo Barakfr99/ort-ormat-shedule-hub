@@ -64,7 +64,7 @@ interface AttendanceEntry {
   isJustified: boolean;
 }
 
-type AttendanceRecordRow = Tables["attendance_records"];
+type AttendanceRecordRow = Tables<"attendance_records">;
 
 const DAY_NAMES = ["ראשון", "שני", "שלישי", "רביעי", "חמישי", "שישי", "שבת"];
 
