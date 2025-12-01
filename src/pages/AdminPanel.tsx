@@ -33,10 +33,7 @@ export default function AdminPanel() {
     [key: number]: string;
   }>({});
   const [rangeText, setRangeText] = useState('');
-  const [rangeStart, setRangeStart] = useState('1');
-  const [rangeEnd, setRangeEnd] = useState('8');
   const [rangeDates, setRangeDates] = useState<Date[]>([new Date()]);
-  const [isFullDay, setIsFullDay] = useState(false);
   const [shouldSetResetDate, setShouldSetResetDate] = useState(false);
   const [isPermanentChange, setIsPermanentChange] = useState(false);
   const [resetDate, setResetDate] = useState<Date>(new Date());
@@ -109,12 +106,9 @@ export default function AdminPanel() {
           }
         }
       } else if (editMode === 'range') {
-        // Range update
-        const start = isFullDay ? 1 : parseInt(rangeStart);
-        const end = isFullDay ? 8 : parseInt(rangeEnd);
-        if (!isFullDay && (isNaN(start) || isNaN(end) || start < 1 || end > 8 || start > end)) {
-          throw new Error('טווח שעות לא תקין');
-        }
+        // Full day update - always 1-8
+        const start = 1;
+        const end = 8;
         for (const studentName of selectedStudents) {
           for (const date of rangeDates) {
             for (let hour = start; hour <= end; hour++) {
@@ -238,14 +232,26 @@ export default function AdminPanel() {
 
   const exportExcelMutation = useMutation({
     mutationFn: async () => {
-      const { data, error } = await supabase.functions.invoke('export-updated-excel');
+      // Use direct fetch to get binary response properly
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
-      if (error) throw error;
-      
-      // Create a blob from the response and download it
-      const blob = new Blob([data], { 
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      const response = await fetch(`${supabaseUrl}/functions/v1/export-updated-excel`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+        },
       });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || `HTTP error: ${response.status}`);
+      }
+      
+      // Get the binary data as blob
+      const blob = await response.blob();
+      
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -364,7 +370,7 @@ export default function AdminPanel() {
                 </div>
                 <div className="flex items-center space-x-2 space-x-reverse mb-2">
                   <RadioGroupItem value="range" id="range" />
-                  <Label htmlFor="range" className="cursor-pointer">עדכון טווח שעות</Label>
+                  <Label htmlFor="range" className="cursor-pointer">עדכון יום מלא</Label>
                 </div>
               </RadioGroup>
             </Card>
@@ -401,7 +407,7 @@ export default function AdminPanel() {
               </Card>}
 
             {editMode === 'range' && <Card className="p-6 card-elevated">
-                <h3 className="text-xl font-bold mb-4 text-foreground">עדכון טווח שעות</h3>
+                <h3 className="text-xl font-bold mb-4 text-foreground">עדכון יום מלא</h3>
                 
                 <div className="space-y-4">
                   <div>
@@ -426,46 +432,9 @@ export default function AdminPanel() {
                     </Popover>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <Checkbox checked={isFullDay} onCheckedChange={checked => setIsFullDay(checked === true)} id="full-day" />
-                    <label htmlFor="full-day" className="text-sm font-medium text-foreground cursor-pointer">
-                      יום מלא (כל 8 השעות)
-                    </label>
-                  </div>
-
-                  {!isFullDay && <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-foreground">
-                          מ-שעה
-                        </label>
-                        <Select value={rangeStart} onValueChange={setRangeStart}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[1, 2, 3, 4, 5, 6, 7, 8].map(h => <SelectItem key={h} value={h.toString()}>
-                                {h}
-                              </SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium mb-2 text-foreground">
-                          עד-שעה
-                        </label>
-                        <Select value={rangeEnd} onValueChange={setRangeEnd}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {[1, 2, 3, 4, 5, 6, 7, 8].map(h => <SelectItem key={h} value={h.toString()}>
-                                {h}
-                              </SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>}
+                  <p className="text-sm text-muted-foreground">
+                    השינוי יחול על כל 8 השעות ביום
+                  </p>
                 </div>
               </Card>}
 

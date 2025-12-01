@@ -35,11 +35,23 @@ serve(async (req) => {
     }
 
     const arrayBuffer = await baseExcelResponse.arrayBuffer();
-    const workbook = XLSX.read(arrayBuffer);
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+    
+    // Read the workbook while preserving styles and formatting
+    const workbook = XLSX.read(new Uint8Array(arrayBuffer), { 
+      type: 'array',
+      cellStyles: true,
+      cellFormula: true,
+      cellDates: true,
+      cellNF: true,
+      sheetStubs: true
+    });
+    
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
 
-    console.log(`Base Excel loaded with ${jsonData.length} rows`);
+    // Get the range of the worksheet
+    const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
+    console.log(`Base Excel loaded with ${range.e.r + 1} rows`);
 
     // Fetch all permanent overrides
     const { data: permanentOverrides, error: overridesError } = await supabaseClient
@@ -69,49 +81,63 @@ serve(async (req) => {
 
     console.log('Processing rows and applying permanent overrides...');
 
-    // Process each student row and apply permanent overrides
-    for (let i = 1; i < jsonData.length; i++) {
-      const row = jsonData[i];
-      if (!row || row.length < 3) continue;
-
-      const studentName = row[0];
-      
-      // For each day and hour, check if there's a permanent override
-      for (let dayIndex = 0; dayIndex < DAYS.length; dayIndex++) {
-        const dayName = DAYS[dayIndex];
-        
-        for (let hour = 1; hour <= 8; hour++) {
-          const key = `${studentName}|${dayName}|${hour}`;
-          const override = overridesMap.get(key);
-          
-          if (override) {
-            // Calculate the column index in the Excel file
-            // Columns: Name (0), Class (1), Grade (2), then 8 hours per day
-            const columnIndex = 2 + (dayIndex * 8) + (hour - 1);
-            row[columnIndex] = override;
-            console.log(`Applied override for ${studentName}, ${dayName}, hour ${hour}`);
-          }
-        }
+    // Build a map of student names to row indices
+    const studentRowMap = new Map<string, number>();
+    for (let row = 1; row <= range.e.r; row++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: row, c: 0 });
+      const cell = worksheet[cellAddress];
+      if (cell && cell.v) {
+        studentRowMap.set(String(cell.v), row);
       }
     }
 
-    console.log('Creating new workbook with updated data...');
+    // Apply permanent overrides directly to the worksheet cells
+    for (const [key, overrideText] of overridesMap) {
+      const [studentName, dayName, hourStr] = key.split('|');
+      const hour = parseInt(hourStr);
+      const dayIndex = DAYS.indexOf(dayName);
+      
+      if (dayIndex === -1) continue;
+      
+      const row = studentRowMap.get(studentName);
+      if (row === undefined) continue;
+      
+      // Calculate the column index in the Excel file
+      // Columns: Name (0), Class (1), Grade (2), then 8 hours per day
+      const col = 2 + (dayIndex * 8) + (hour - 1);
+      
+      const cellAddress = XLSX.utils.encode_cell({ r: row, c: col });
+      
+      // Preserve existing cell properties if they exist, just update the value
+      if (worksheet[cellAddress]) {
+        worksheet[cellAddress].v = overrideText;
+        worksheet[cellAddress].w = overrideText;
+      } else {
+        worksheet[cellAddress] = { t: 's', v: overrideText, w: overrideText };
+      }
+      
+      console.log(`Applied override for ${studentName}, ${dayName}, hour ${hour} at cell ${cellAddress}`);
+    }
 
-    // Create a new worksheet with updated data
-    const newWorksheet = XLSX.utils.aoa_to_sheet(jsonData);
-    const newWorkbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(newWorkbook, newWorksheet, workbook.SheetNames[0]);
+    console.log('Writing workbook with preserved formatting...');
 
-    // Generate Excel file
-    const excelBuffer = XLSX.write(newWorkbook, { type: 'buffer', bookType: 'xlsx' });
+    // Write the workbook back, preserving the original format
+    const excelBuffer = XLSX.write(workbook, { 
+      type: 'array',
+      bookType: 'xlsx',
+      bookSST: true
+    });
 
     console.log('Excel export completed successfully');
 
-    return new Response(excelBuffer, {
+    const dateStr = new Date().toISOString().split('T')[0];
+    const encodedFilename = encodeURIComponent(`מערכת_מעודכנת_${dateStr}.xlsx`);
+    
+    return new Response(new Uint8Array(excelBuffer), {
       headers: {
         ...corsHeaders,
         'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'Content-Disposition': `attachment; filename="מערכת_מעודכנת_${new Date().toISOString().split('T')[0]}.xlsx"`,
+        'Content-Disposition': `attachment; filename="schedule_${dateStr}.xlsx"; filename*=UTF-8''${encodedFilename}`,
       },
     });
 
