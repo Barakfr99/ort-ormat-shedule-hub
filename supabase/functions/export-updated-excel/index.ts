@@ -53,30 +53,25 @@ serve(async (req) => {
     const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1');
     console.log(`Base Excel loaded with ${range.e.r + 1} rows`);
 
-    // Fetch all permanent overrides
-    const { data: permanentOverrides, error: overridesError } = await supabaseClient
-      .from('schedule_overrides')
-      .select('*')
-      .eq('is_permanent', true);
+    // Fetch all permanent changes
+    const { data: permanentChanges, error: permanentError } = await supabaseClient
+      .from('permanent_schedule_changes')
+      .select('*');
 
-    if (overridesError) {
-      console.error('Error fetching overrides:', overridesError);
-      throw overridesError;
+    if (permanentError) {
+      console.error('Error fetching permanent changes:', permanentError);
+      throw permanentError;
     }
 
-    console.log(`Found ${permanentOverrides?.length || 0} permanent overrides`);
+    console.log(`Found ${permanentChanges?.length || 0} permanent changes`);
 
     // Create a map of overrides by student name, day, and hour
     const overridesMap = new Map<string, string>();
     
-    for (const override of permanentOverrides || []) {
-      // Parse date to get day of week
-      const date = new Date(override.date);
-      const dayIndex = date.getDay(); // 0 = Sunday, 1 = Monday, etc.
-      const dayName = DAYS[dayIndex === 0 ? 0 : dayIndex - 1]; // Adjust for Hebrew days
-      
-      const key = `${override.student_id}|${dayName}|${override.hour_number}`;
-      overridesMap.set(key, override.override_text);
+    for (const change of permanentChanges || []) {
+      const key = `${change.student_id}|${change.day_of_week}|${change.hour_number}`;
+      const content = [change.subject, change.teacher || '', change.room || ''].join(' / ');
+      overridesMap.set(key, content);
     }
 
     console.log('Processing rows and applying permanent overrides...');

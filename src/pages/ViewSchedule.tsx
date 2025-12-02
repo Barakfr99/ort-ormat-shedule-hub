@@ -75,32 +75,10 @@ export default function ViewSchedule() {
     enabled: !!studentId,
   });
 
-  const { data: resetDate } = useQuery({
-    queryKey: ['resetDate', studentId],
-    queryFn: async () => {
-      if (!studentId) return null;
-      
-      const { data, error } = await supabase
-        .from('reset_dates')
-        .select('*')
-        .eq('student_id', studentId)
-        .maybeSingle();
-
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
-    },
-    enabled: !!studentId,
-  });
-
   const dailySchedule = student ? getStudentScheduleForDate(student, currentDate) : {};
 
   const getHourContent = (hourNumber: number): string => {
     const hourStr = hourNumber.toString();
-    
-    // Check if date is after reset date - if so, show base schedule
-    if (resetDate && new Date(currentDate) > new Date(resetDate.reset_date)) {
-      return dailySchedule[hourStr] || '';
-    }
 
     // Check for override
     const override = overrides?.find((o) => o.hour_number === hourNumber);

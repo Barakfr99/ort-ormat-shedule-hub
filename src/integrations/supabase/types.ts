@@ -148,6 +148,63 @@ export type Database = {
         }
         Relationships: []
       }
+      permanent_schedule_changes: {
+        Row: {
+          created_at: string | null
+          day_of_week: string
+          hour_number: number
+          id: string
+          room: string
+          student_id: string
+          subject: string
+          teacher: string
+        }
+        Insert: {
+          created_at?: string | null
+          day_of_week: string
+          hour_number: number
+          id?: string
+          room?: string
+          student_id: string
+          subject: string
+          teacher?: string
+        }
+        Update: {
+          created_at?: string | null
+          day_of_week?: string
+          hour_number?: number
+          id?: string
+          room?: string
+          student_id?: string
+          subject?: string
+          teacher?: string
+        }
+        Relationships: []
+      }
+      teachers: {
+        Row: {
+          created_at: string | null
+          id: string
+          id_code: string
+          name: string
+          normalized_id_code: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          id_code: string
+          name: string
+          normalized_id_code: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          id_code?: string
+          name?: string
+          normalized_id_code?: string
+        }
+        Relationships: []
+      }
       students: {
         Row: {
           class: string

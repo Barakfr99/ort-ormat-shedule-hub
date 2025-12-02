@@ -6,15 +6,17 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { findTeacherByCode } from "@/lib/teachers";
 import { ArrowRight, UserCheck2 } from "lucide-react";
 import schoolLogo from "@/assets/school-logo.png";
 import { getStoredTeacher, persistTeacherSession } from "@/hooks/useTeacherAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { findTeacherByCode, normalizeIdCode } from "@/lib/teachers";
 
 export default function TeacherLogin() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [code, setCode] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (getStoredTeacher()) {
@@ -22,27 +24,66 @@ export default function TeacherLogin() {
     }
   }, [navigate]);
 
-  const handleLogin = () => {
-    const teacher = findTeacherByCode(code);
-
-    if (!teacher) {
+  const handleLogin = async () => {
+    if (!code.trim()) {
       toast({
-        title: "קוד מורה שגוי",
-        description: "אנא ודא שהזנת את תעודת הזהות כפי שנמסרה לך.",
+        title: "חסר קוד מורה",
+        description: "אנא הזן את מספר תעודת הזהות המלא.",
         variant: "destructive",
       });
-      setCode("");
       return;
     }
 
-    persistTeacherSession(teacher);
+    setIsSubmitting(true);
+    const normalizedCode = normalizeIdCode(code);
 
-    toast({
-      title: "ברוך/ה הבא/ה",
-      description: `${teacher.name}, הכניסה הושלמה בהצלחה.`,
-    });
+    try {
+      const { data, error } = await supabase
+        .from("teachers")
+        .select("name,id_code")
+        .eq("normalized_id_code", normalizedCode)
+        .maybeSingle();
 
-    navigate("/teacher");
+      let teacher = null;
+
+      if (error && error.code !== "PGRST116") {
+        throw error;
+      }
+
+      if (data) {
+        teacher = { name: data.name, idCode: data.id_code };
+      } else {
+        teacher = findTeacherByCode(code);
+      }
+
+      if (!teacher) {
+        toast({
+          title: "קוד מורה שגוי",
+          description: "אנא ודא שהזנת את תעודת הזהות כפי שנמסרה לך.",
+          variant: "destructive",
+        });
+        setCode("");
+        return;
+      }
+
+      persistTeacherSession(teacher);
+
+      toast({
+        title: "ברוך/ה הבא/ה",
+        description: `${teacher.name}, הכניסה הושלמה בהצלחה.`,
+      });
+
+      navigate("/teacher");
+    } catch (err) {
+      console.error("Teacher login failed", err);
+      toast({
+        title: "שגיאה בהתחברות",
+        description: err instanceof Error ? err.message : "אירעה שגיאה לא צפויה, נסה שוב.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -83,8 +124,12 @@ export default function TeacherLogin() {
               />
             </div>
 
-            <Button onClick={handleLogin} className="w-full gradient-primary text-lg h-12">
-              התחברות מורה
+            <Button
+              onClick={handleLogin}
+              className="w-full gradient-primary text-lg h-12"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "מאמת נתונים..." : "התחברות מורה"}
             </Button>
 
             <Button variant="outline" onClick={() => navigate("/")} className="w-full">

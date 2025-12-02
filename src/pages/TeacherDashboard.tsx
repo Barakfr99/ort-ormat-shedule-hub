@@ -83,7 +83,7 @@ export default function TeacherDashboard() {
   const navigate = useNavigate();
   const { teacher, logout } = useTeacherAuth();
   const { data, loading } = useScheduleData();
-  const [currentDate, setCurrentDate] = useState(() => new Date());
+  const [currentDate, setCurrentDate] = useState(() => startOfDay(new Date()));
   const [selectedSlot, setSelectedSlot] = useState<TeacherLessonSlot | null>(null);
   const [sortField, setSortField] = useState<"name" | "class">("name");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
@@ -110,6 +110,10 @@ export default function TeacherDashboard() {
   }, [teacher, navigate]);
 
   const formattedDbDate = useMemo(() => formatDateForDB(currentDate), [currentDate]);
+  const todayStart = startOfDay(new Date());
+  const selectedDayStart = startOfDay(currentDate);
+  const isFutureSelectedDay = selectedDayStart > todayStart;
+  const isTodaySelectedDay = selectedDayStart.getTime() === todayStart.getTime();
 
   const normalizedTeacherName = useMemo(
     () => (teacher ? normalizeTeacherName(teacher.name) : ""),
@@ -166,18 +170,6 @@ export default function TeacherDashboard() {
     },
   });
 
-  const { data: resetDates = [], isLoading: resetLoading } = useQuery({
-    queryKey: ["teacherResetDates"],
-    enabled: Boolean(teacher),
-    queryFn: async () => {
-      const { data: response, error } = await supabase.from("reset_dates").select("*");
-      if (error) {
-        throw error;
-      }
-      return response ?? [];
-    },
-  });
-
   const schedule = useMemo<TeacherLessonSlot[]>(() => {
     if (!teacher || !data) {
       return HOUR_TIMES.map(({ hour, time, label }) => ({
@@ -193,10 +185,8 @@ export default function TeacherDashboard() {
       students: data.students,
       dayName: DAY_NAMES[currentDate.getDay()],
       overrides,
-      resetDates,
-      currentDate,
     });
-  }, [teacher, data, overrides, resetDates, currentDate]);
+  }, [teacher, data, overrides, currentDate]);
 
   const teacherIdentifier = teacher?.idCode || teacher?.name || "";
 
@@ -332,7 +322,7 @@ export default function TeacherDashboard() {
 
   const dayName = DAY_NAMES[currentDate.getDay()];
   const isWeekend = currentDate.getDay() === 5 || currentDate.getDay() === 6;
-  const isLoadingState = loading || overridesLoading || resetLoading;
+  const isLoadingState = loading || overridesLoading;
   const activeLessons = schedule.filter((slot) => slot.lesson);
 
   const handleLogout = () => {
@@ -341,8 +331,9 @@ export default function TeacherDashboard() {
   };
 
   const changeDate = (days: number) => {
-    const updated = new Date(currentDate);
+    const updated = new Date(selectedDayStart);
     updated.setDate(updated.getDate() + days);
+    updated.setHours(0, 0, 0, 0);
     setCurrentDate(updated);
   };
 
@@ -350,8 +341,7 @@ export default function TeacherDashboard() {
     if (!slot.lesson) return;
     
     // Check if trying to open dialog for future date
-    const isFutureDate = currentDate > new Date(new Date().setHours(0, 0, 0, 0));
-    if (isFutureDate) {
+    if (isFutureSelectedDay) {
       toast({
         title: "לא ניתן למלא נוכחות",
         description: "ניתן למלא נוכחות רק עבור היום הנוכחי והתאריכים שלפניו.",
@@ -429,8 +419,7 @@ export default function TeacherDashboard() {
     if (!teacher || !selectedSlot?.lesson) return;
     
     // Check if trying to save attendance for future date
-    const isFutureDate = currentDate > new Date(new Date().setHours(0, 0, 0, 0));
-    if (isFutureDate) {
+    if (isFutureSelectedDay) {
       toast({
         title: "לא ניתן למלא נוכחות",
         description: "ניתן למלא נוכחות רק עבור היום הנוכחי והתאריכים שלפניו.",
@@ -568,31 +557,26 @@ export default function TeacherDashboard() {
     <div className="min-h-screen flex flex-col bg-background">
       <Header title="מערכת שעות למורים" />
       <main className="flex-1 container mx-auto px-2 sm:px-4 py-4 max-w-5xl">
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4 flex-row-reverse">
           <Button variant="outline" size="sm" onClick={() => navigate("/")}>
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="mr-2 h-4 w-4" />
             חזרה לעמוד הראשי
           </Button>
           <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="ml-2 h-4 w-4" />
+            <LogOut className="mr-2 h-4 w-4" />
             התנתק/י
           </Button>
         </div>
 
         <Card className="p-4 sm:p-6 card-elevated mb-4">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">מחובר/ת כמורה</p>
-                <h2 className="text-2xl font-bold text-foreground">{teacher.name}</h2>
-                <p className="text-muted-foreground flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  {activeLessons.reduce((total, slot) => total + (slot.lesson?.students.length ?? 0), 0)}{" "}
-                  תלמידים ביום הנוכחי
-                </p>
-              </div>
+          <div className="flex flex-col items-center gap-4">
+            <div className="text-center">
+              <p className="text-sm text-muted-foreground">מחובר/ת כמורה</p>
+              <h2 className="text-2xl font-bold text-foreground">{teacher.name}</h2>
+            </div>
 
-              <div className="flex items-center justify-between gap-2 w-full">
+            <div className="flex flex-col items-center gap-2">
+              <div className="flex items-center gap-2">
                 <Button 
                   variant="secondary" 
                   size="sm" 
@@ -603,7 +587,7 @@ export default function TeacherDashboard() {
                   אתמול
                 </Button>
 
-                <div className="flex-1 text-center min-w-[140px]">
+                <div className="text-center min-w-[140px]">
                   <p className="text-lg font-bold text-primary">{dayName}</p>
                   <p className="text-sm text-muted-foreground">{formatDate(currentDate)}</p>
                 </div>
@@ -612,15 +596,13 @@ export default function TeacherDashboard() {
                   variant="secondary" 
                   size="sm" 
                   onClick={() => changeDate(1)}
-                  disabled={currentDate >= new Date(new Date().setHours(0, 0, 0, 0))}
+                  disabled={isFutureSelectedDay || isTodaySelectedDay}
                 >
                   מחר
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
               </div>
-            </div>
-            
-            <div className="flex justify-center">
+              
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" size="sm" className="justify-center text-center">
@@ -632,7 +614,7 @@ export default function TeacherDashboard() {
                   <Calendar
                     mode="single"
                     selected={currentDate}
-                    onSelect={(date) => date && setCurrentDate(date)}
+                    onSelect={(date) => date && setCurrentDate(startOfDay(date))}
                     disabled={(date) => date > new Date()}
                     initialFocus
                     className={cn("p-3 pointer-events-auto")}
@@ -649,8 +631,8 @@ export default function TeacherDashboard() {
           className="space-y-4"
         >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="attendance">נוכחות</TabsTrigger>
             <TabsTrigger value="schedule">מערכת יומית</TabsTrigger>
+            <TabsTrigger value="attendance">נוכחות</TabsTrigger>
           </TabsList>
 
           <TabsContent value="schedule" className="space-y-4">
@@ -686,7 +668,7 @@ export default function TeacherDashboard() {
                         const hasAttendance = dailyAttendance.some(
                           record => record.hour_number === slot.hour
                         );
-                        const isFutureDate = currentDate > new Date(new Date().setHours(0, 0, 0, 0));
+                        const isFutureDate = isFutureSelectedDay;
                         
                         return (
                           <tr
@@ -696,22 +678,22 @@ export default function TeacherDashboard() {
                             }`}
                             onClick={() => slot.lesson && openStudentsDialog(slot)}
                           >
-                            <td className="p-3 text-right align-middle">
+                            <td className="p-3 align-middle">
                               {slot.lesson ? (
-                                <div className="space-y-1">
-                                  <div className="flex items-center justify-between gap-2">
-                                    <p className="font-semibold text-foreground">{slot.lesson.subject}</p>
+                                <div className="space-y-1 text-right">
+                                  <div className="flex items-center gap-2 flex-row-reverse">
                                     {!hasAttendance && !isFutureDate && (
                                       <span className="text-xs font-semibold text-red-500 bg-red-50 px-2 py-1 rounded">
                                         טרם מולא נוכחות
                                       </span>
                                     )}
+                                    <p className="font-semibold text-foreground">{slot.lesson.subject}</p>
                                   </div>
                                   {slot.lesson.room && (
                                     <p className="text-sm text-primary">חדר: {slot.lesson.room}</p>
                                   )}
-                                  <p className="text-sm text-muted-foreground flex items-center justify-end gap-1 text-right">
-                                    <Users className="h-4 w-4" />
+                                  <p className="text-sm text-muted-foreground">
+                                    <Users className="inline-block h-4 w-4 ml-1" />
                                     {slot.lesson.students.length} תלמידים משובצים
                                   </p>
                                   <p className="text-xs text-muted-foreground">
@@ -738,8 +720,8 @@ export default function TeacherDashboard() {
 
           <TabsContent value="attendance">
             <Card className="p-4 sm:p-6 card-elevated space-y-6 text-right">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
+              <div className="flex flex-wrap items-center justify-between gap-3 flex-row-reverse">
+                <div className="text-right">
                   <h3 className="text-xl font-bold text-foreground">דוח נוכחות</h3>
                   <p className="text-sm text-muted-foreground">
                     בחר תלמיד, כיתה, שכבה וטווח תאריכים לצפייה בסטטיסטיקות החיסורים.
@@ -750,15 +732,38 @@ export default function TeacherDashboard() {
                 </Button>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
+              <div className="grid gap-4 md:grid-cols-2" dir="rtl">
+                <div className="text-right">
+                  <p className="text-sm font-medium mb-2 text-foreground">כיתה</p>
+                  <Select
+                    value={reportClass}
+                    onValueChange={(value) => {
+                      setReportClass(value);
+                      setReportStudent("all");
+                    }}
+                  >
+                    <SelectTrigger className="text-right">
+                      <SelectValue placeholder="בחר כיתה" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">כל הכיתות</SelectItem>
+                      {classOptions.map((className) => (
+                        <SelectItem key={className} value={className}>
+                          {className}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="text-right">
                   <p className="text-sm font-medium mb-2 text-foreground">תלמיד/ה</p>
                   <Select
                     value={reportStudent}
                     onValueChange={(value) => setReportStudent(value)}
                     disabled={studentOptions.length === 0}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-right">
                       <SelectValue
                         placeholder={
                           studentOptions.length === 0 ? "אין תלמידים זמינים" : "בחר תלמיד או הצג את כולם"
@@ -775,33 +780,27 @@ export default function TeacherDashboard() {
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
 
-                <div>
-                  <p className="text-sm font-medium mb-2 text-foreground">כיתה</p>
+              <div className="grid gap-4 md:grid-cols-2" dir="rtl">
+                <div className="text-right">
+                  <p className="text-sm font-medium mb-2 text-foreground">סוג חיסור</p>
                   <Select
-                    value={reportClass}
-                    onValueChange={(value) => {
-                      setReportClass(value);
-                      setReportStudent("all");
-                    }}
+                    value={justificationFilter}
+                    onValueChange={(value) => setJustificationFilter(value as "all" | "justified" | "unjustified")}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="בחר כיתה" />
+                    <SelectTrigger className="text-right">
+                      <SelectValue placeholder="בחר פילטר" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">כל הכיתות</SelectItem>
-                      {classOptions.map((className) => (
-                        <SelectItem key={className} value={className}>
-                          {className}
-                        </SelectItem>
-                      ))}
+                      <SelectItem value="all">כל השיעורים</SelectItem>
+                      <SelectItem value="justified">חיסורים מוצדקים בלבד</SelectItem>
+                      <SelectItem value="unjustified">חיסורים לא מוצדקים בלבד</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
+                <div className="text-right">
                   <p className="text-sm font-medium mb-2 text-foreground">שכבה</p>
                   <Select
                     value={reportGrade}
@@ -810,7 +809,7 @@ export default function TeacherDashboard() {
                       setReportStudent("all");
                     }}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-right">
                       <SelectValue placeholder="בחר שכבה" />
                     </SelectTrigger>
                     <SelectContent>
@@ -823,56 +822,19 @@ export default function TeacherDashboard() {
                     </SelectContent>
                   </Select>
                 </div>
-
-                <div>
-                  <p className="text-sm font-medium mb-2 text-foreground">סוג חיסור</p>
-                  <Select
-                    value={justificationFilter}
-                    onValueChange={(value) => setJustificationFilter(value as "all" | "justified" | "unjustified")}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="בחר פילטר" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">כל השיעורים</SelectItem>
-                      <SelectItem value="justified">חיסורים מוצדקים בלבד</SelectItem>
-                      <SelectItem value="unjustified">חיסורים לא מוצדקים בלבד</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div>
-                  <p className="text-sm font-medium mb-2 text-foreground">עד תאריך</p>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start text-right">
-                        <CalendarIcon className="ml-2 h-4 w-4" />
-                        {formatDate(reportToDate)}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={reportToDate}
-                        onSelect={handleToDateChange}
-                        disabled={(date) => date < reportFromDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-                <div>
+              <div className="grid gap-4 md:grid-cols-2" dir="rtl">
+                <div className="text-right">
                   <p className="text-sm font-medium mb-2 text-foreground">מתאריך</p>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="justify-start text-right">
-                        <CalendarIcon className="ml-2 h-4 w-4" />
+                      <Button variant="outline" className="w-full justify-start text-right">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
                         {formatDate(reportFromDate)}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className="w-auto p-0" align="end">
                       <Calendar
                         mode="single"
                         selected={reportFromDate}
@@ -883,13 +845,33 @@ export default function TeacherDashboard() {
                     </PopoverContent>
                   </Popover>
                 </div>
+                <div className="text-right">
+                  <p className="text-sm font-medium mb-2 text-foreground">עד תאריך</p>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-right">
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formatDate(reportToDate)}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={reportToDate}
+                        onSelect={handleToDateChange}
+                        disabled={(date) => date < reportFromDate}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-3">
+              <div className="grid gap-4 md:grid-cols-3" dir="rtl">
                 <Card className="p-4 bg-muted/50 border border-border text-right">
-                  <p className="text-sm text-muted-foreground">אחוז חיסורים</p>
+                  <p className="text-sm text-muted-foreground">שיעורים שהתקיימו</p>
                   <p className="text-2xl font-bold text-foreground mt-1">
-                    {attendanceSummary.absencePercentage}%
+                    {attendanceSummary.totalLessons}
                   </p>
                 </Card>
                 <Card className="p-4 bg-muted/50 border border-border text-right">
@@ -899,9 +881,9 @@ export default function TeacherDashboard() {
                   </p>
                 </Card>
                 <Card className="p-4 bg-muted/50 border border-border text-right">
-                  <p className="text-sm text-muted-foreground">שיעורים שהתקיימו</p>
+                  <p className="text-sm text-muted-foreground">אחוז חיסורים</p>
                   <p className="text-2xl font-bold text-foreground mt-1">
-                    {attendanceSummary.totalLessons}
+                    {attendanceSummary.absencePercentage}%
                   </p>
                 </Card>
               </div>
@@ -964,7 +946,7 @@ export default function TeacherDashboard() {
       <Footer />
 
       <Dialog open={Boolean(selectedSlot)} onOpenChange={(open) => !open && closeDialog()}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           {selectedSlot && selectedSlot.lesson && (
             <>
               <DialogHeader>
@@ -977,26 +959,14 @@ export default function TeacherDashboard() {
                 {selectedSlot.lesson.room ? selectedSlot.lesson.room : "ללא שיבוץ חדר"}
               </p>
               <div className="space-y-4 mb-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <p className="text-sm font-medium text-foreground mb-1">מיון ראשי</p>
-                    <Select value={sortField} onValueChange={(value) => setSortField(value as "name" | "class")}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="בחר שדה" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="name">שם</SelectItem>
-                        <SelectItem value="class">כיתה</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
+                <div className="grid gap-3 sm:grid-cols-2" dir="rtl">
+                  <div className="text-right">
                     <p className="text-sm font-medium text-foreground mb-1">כיוון מיון</p>
                     <Select
                       value={sortDirection}
                       onValueChange={(value) => setSortDirection(value as "asc" | "desc")}
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="text-right">
                         <SelectValue placeholder="בחר כיוון" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1005,10 +975,22 @@ export default function TeacherDashboard() {
                       </SelectContent>
                     </Select>
                   </div>
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-foreground mb-1">מיון ראשי</p>
+                    <Select value={sortField} onValueChange={(value) => setSortField(value as "name" | "class")}>
+                      <SelectTrigger className="text-right">
+                        <SelectValue placeholder="בחר שדה" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="name">שם</SelectItem>
+                        <SelectItem value="class">כיתה</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center justify-between mb-2 flex-row-reverse">
                     <p className="text-sm font-medium text-foreground">סינון לפי כיתה</p>
                     {selectedClasses.length > 0 && (
                       <Button
@@ -1028,8 +1010,9 @@ export default function TeacherDashboard() {
                       {uniqueClasses.map((className) => (
                         <label
                           key={className}
-                          className="flex items-center gap-2 text-sm text-foreground cursor-pointer"
+                          className="flex items-center gap-2 text-sm text-foreground cursor-pointer flex-row-reverse justify-end"
                         >
+                          {className}
                           <Checkbox
                             checked={selectedClasses.includes(className)}
                             onCheckedChange={(checked) => {
@@ -1040,7 +1023,6 @@ export default function TeacherDashboard() {
                               );
                             }}
                           />
-                          {className}
                         </label>
                       ))}
                     </div>
@@ -1049,7 +1031,7 @@ export default function TeacherDashboard() {
               </div>
 
               {filteredAndSortedStudents.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap gap-2 mb-4 flex-row-reverse">
                   <Button variant="secondary" size="sm" onClick={() => setAllPresence(true)}>
                     סמן את כולם כנוכחים
                   </Button>
@@ -1063,7 +1045,7 @@ export default function TeacherDashboard() {
                 <p className="text-center text-muted-foreground">אין תלמידים משובצים לשיעור זה.</p>
               ) : (
                 <>
-                  <div className="overflow-x-auto max-h-[60vh]">
+                  <div className="overflow-x-auto max-h-[40vh]">
                     <table className="w-full border-collapse text-sm">
                       <thead>
                         <tr className="bg-muted/40">
@@ -1177,43 +1159,29 @@ function buildTeacherSchedule({
   students,
   dayName,
   overrides,
-  resetDates,
-  currentDate,
 }: {
   teacherName: string;
   students: StudentSchedule[];
   dayName: string;
   overrides: Array<{ student_id: string; hour_number: number; override_text: string }>;
-  resetDates: Array<{ student_id: string; reset_date: string }>;
-  currentDate: Date;
 }): TeacherLessonSlot[] {
   const normalizedTeacherName = normalizeTeacherName(teacherName);
-  const resetsMap = new Map(resetDates.map((entry) => [entry.student_id, startOfDay(entry.reset_date)]));
   const overridesMap = new Map(
     overrides.map((entry) => [`${entry.student_id}-${entry.hour_number}`, entry.override_text])
   );
 
   const lessonsMap = new Map<number, TeacherLessonDetails>();
-  const currentDay = startOfDay(currentDate);
 
   for (const student of students) {
     const dailySchedule = student.schedule[dayName];
     if (!dailySchedule) continue;
-
-    const resetDate = resetsMap.get(student.name);
 
     for (const { hour } of HOUR_TIMES) {
       const hourKey = hour.toString();
       const baseContent = dailySchedule[hourKey] || "";
       const overrideKey = `${student.name}-${hour}`;
       const hasOverride = overridesMap.has(overrideKey);
-      const overrideContent = hasOverride ? overridesMap.get(overrideKey) ?? "" : undefined;
-      const effectiveContent = getEffectiveContent({
-        baseContent,
-        overrideContent,
-        resetDate,
-        currentDay,
-      });
+      const effectiveContent = hasOverride ? overridesMap.get(overrideKey) ?? "" : baseContent;
 
       if (!effectiveContent || effectiveContent.trim() === "") continue;
 
@@ -1246,28 +1214,6 @@ function buildTeacherSchedule({
     label,
     lesson: lessonsMap.get(hour) ?? null,
   }));
-}
-
-function getEffectiveContent({
-  baseContent,
-  overrideContent,
-  resetDate,
-  currentDay,
-}: {
-  baseContent: string;
-  overrideContent: string | undefined;
-  resetDate: Date | undefined;
-  currentDay: Date;
-}) {
-  if (resetDate && currentDay > resetDate) {
-    return baseContent;
-  }
-
-  if (overrideContent !== undefined) {
-    return overrideContent;
-  }
-
-  return baseContent;
 }
 
 function startOfDay(date: Date | string) {
