@@ -695,8 +695,8 @@ export default function AdminPanel() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2" dir="rtl">
-                    <div>
+                  <div className="flex flex-col md:flex-row-reverse gap-4">
+                    <div className="flex-1">
                       <label className="block text-sm font-medium mb-2 text-foreground text-right">שעה</label>
                       <Select value={String(permanentHour)} onValueChange={value => setPermanentHour(Number(value))}>
                         <SelectTrigger>
@@ -711,7 +711,7 @@ export default function AdminPanel() {
                         </SelectContent>
                       </Select>
                     </div>
-                    <div>
+                    <div className="flex-1">
                       <label className="block text-sm font-medium mb-2 text-foreground text-right">יום בשבוע</label>
                       <Select value={permanentDay} onValueChange={value => setPermanentDay(value)}>
                         <SelectTrigger>
