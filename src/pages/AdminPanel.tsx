@@ -556,12 +556,22 @@ export default function AdminPanel() {
                                 placeholder="שם המקצוע *"
                                 className="text-right flex-1"
                               />
-                              <Input
-                                value={content.teacher}
-                                onChange={e => updateHourContent(hour, 'teacher', e.target.value)}
-                                placeholder="שם המורה"
-                                className="text-right flex-1"
-                              />
+                              <Select 
+                                value={content.teacher || "__none__"} 
+                                onValueChange={value => updateHourContent(hour, 'teacher', value === "__none__" ? "" : value)}
+                              >
+                                <SelectTrigger className="text-right flex-1">
+                                  <SelectValue placeholder="שם המורה" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="__none__">ללא מורה</SelectItem>
+                                  {teacherRows.map(teacher => (
+                                    <SelectItem key={teacher.id} value={teacher.name}>
+                                      {teacher.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
                               <Input
                                 value={content.room}
                                 onChange={e => updateHourContent(hour, 'room', e.target.value)}
@@ -590,12 +600,22 @@ export default function AdminPanel() {
                             placeholder="שם המקצוע *"
                             className="text-right flex-1"
                           />
-                          <Input
-                            value={rangeContent.teacher}
-                            onChange={e => updateRangeContent('teacher', e.target.value)}
-                            placeholder="שם המורה"
-                            className="text-right flex-1"
-                          />
+                          <Select 
+                            value={rangeContent.teacher || "__none__"} 
+                            onValueChange={value => updateRangeContent('teacher', value === "__none__" ? "" : value)}
+                          >
+                            <SelectTrigger className="text-right flex-1">
+                              <SelectValue placeholder="שם המורה" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">ללא מורה</SelectItem>
+                              {teacherRows.map(teacher => (
+                                <SelectItem key={teacher.id} value={teacher.name}>
+                                  {teacher.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                           <Input
                             value={rangeContent.room}
                             onChange={e => updateRangeContent('room', e.target.value)}
