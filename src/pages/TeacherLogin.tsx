@@ -44,19 +44,11 @@ export default function TeacherLogin() {
         .eq("normalized_id_code", normalizedCode)
         .maybeSingle();
 
-      let teacher = null;
-
       if (error && error.code !== "PGRST116") {
         throw error;
       }
 
-      if (data) {
-        teacher = { name: data.name, idCode: data.id_code };
-      } else {
-        teacher = findTeacherByCode(code);
-      }
-
-      if (!teacher) {
+      if (!data) {
         toast({
           title: "קוד מורה שגוי",
           description: "אנא ודא שהזנת את תעודת הזהות כפי שנמסרה לך.",
@@ -65,6 +57,8 @@ export default function TeacherLogin() {
         setCode("");
         return;
       }
+
+      const teacher = { name: data.name, idCode: data.id_code };
 
       persistTeacherSession(teacher);
 
