@@ -826,11 +826,11 @@ export default function AdminPanel() {
                 </Card>
 
                 <Card className="p-6 card-elevated">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <h3 className="text-xl font-bold text-foreground text-right">רשימת המורים</h3>
+                  <div className="flex items-center justify-between mb-4" dir="rtl">
+                    <div className="text-right">
+                      <h3 className="text-xl font-bold text-foreground">רשימת המורים</h3>
                       <p className="text-sm text-muted-foreground">
-                        {teachersLoading ? 'טוען נתונים...' : `סה\"כ ${teacherRows.length} מורים`}
+                        {teachersLoading ? 'טוען נתונים...' : `סה"כ ${teacherRows.length} מורים`}
                       </p>
                     </div>
                   </div>
