@@ -790,7 +790,6 @@ export default function AdminPanel() {
                       <Input
                         value={teacherForm.idCode}
                         onChange={e => setTeacherForm(prev => ({ ...prev, idCode: e.target.value }))}
-                        placeholder="הקלד מספר מלא (ניתן להתחיל ב-0)"
                         className="text-right"
                       />
                     </div>
@@ -799,7 +798,6 @@ export default function AdminPanel() {
                       <Input
                         value={teacherForm.name}
                         onChange={e => setTeacherForm(prev => ({ ...prev, name: e.target.value }))}
-                        placeholder="לדוגמה: כהן אלון"
                         className="text-right"
                       />
                     </div>
