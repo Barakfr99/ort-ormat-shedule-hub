@@ -652,11 +652,11 @@ export default function AdminPanel() {
                 <Card className="p-6 card-elevated space-y-6">
                   <div>
                     <h3 className="text-xl font-bold text-foreground text-right">שינויים קבועים (מוגן בסיסמה)</h3>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mt-1 text-right">
                       שינוי זה יחול על מערכת הבסיס של התלמיד/ה מן התאריך הנוכחי ואילך. ניתן להשאיר שם מורה או חדר ריק.
                     </p>
                     {!PERMANENT_PASSWORD && (
-                      <p className="text-xs text-destructive mt-1">
+                      <p className="text-xs text-destructive mt-1 text-right">
                         ⚠️ יש להגדיר את המשתנה VITE_PERMANENT_CHANGE_PASSWORD כדי לאפשר שמירת שינויים קבועים.
                       </p>
                     )}
