@@ -786,20 +786,20 @@ export default function AdminPanel() {
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
+                      <label className="block text-sm font-medium mb-2 text-foreground text-right">מספר ת"ז *</label>
+                      <Input
+                        value={teacherForm.idCode}
+                        onChange={e => setTeacherForm(prev => ({ ...prev, idCode: e.target.value }))}
+                        placeholder="הקלד מספר מלא (ניתן להתחיל ב-0)"
+                        className="text-right"
+                      />
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium mb-2 text-foreground text-right">שם המורה *</label>
                       <Input
                         value={teacherForm.name}
                         onChange={e => setTeacherForm(prev => ({ ...prev, name: e.target.value }))}
                         placeholder="לדוגמה: כהן אלון"
-                        className="text-right"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-foreground text-right">מספר ת\"ז *</label>
-                      <Input
-                        value={teacherForm.idCode}
-                        onChange={e => setTeacherForm(prev => ({ ...prev, idCode: e.target.value }))}
-                        placeholder="הקלד מספר מלא (ניתן להתחיל ב-0)"
                         className="text-right"
                       />
                     </div>
