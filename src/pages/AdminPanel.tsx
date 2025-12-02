@@ -779,7 +779,7 @@ export default function AdminPanel() {
                     <h3 className="text-xl font-bold text-foreground text-right">
                       {teacherForm.id ? 'עריכת מורה' : 'הוספת מורה חדש'}
                     </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mt-1 text-right" dir="rtl">
                       הנתונים משמשים להתחברות המורים ולסנכרון המערכת.
                     </p>
                   </div>
