@@ -191,7 +191,7 @@ export default function TeacherDashboard() {
   const teacherIdentifier = teacher?.idCode || teacher?.name || "";
 
   // Query to check if attendance was filled for each lesson today
-  const { data: dailyAttendance = [] } = useQuery<AttendanceRecordRow[]>({
+  const { data: dailyAttendance = [], refetch: refetchDailyAttendance } = useQuery<AttendanceRecordRow[]>({
     queryKey: ["dailyAttendance", teacherIdentifier, formattedDbDate],
     enabled: Boolean(teacherIdentifier),
     queryFn: async () => {
@@ -467,7 +467,7 @@ export default function TeacherDashboard() {
       });
       
       // Refetch daily attendance to update the indicators
-      await refetchLessonAttendance();
+      await Promise.all([refetchLessonAttendance(), refetchDailyAttendance()]);
       closeDialog();
     } catch (error) {
       console.error("Failed to save attendance", error);
@@ -681,23 +681,18 @@ export default function TeacherDashboard() {
                             <td className="p-3 align-middle">
                               {slot.lesson ? (
                                 <div className="space-y-1 text-right">
-                                  <div className="flex items-center gap-2 flex-row-reverse">
-                                    {!hasAttendance && !isFutureDate && (
-                                      <span className="text-xs font-semibold text-red-500 bg-red-50 px-2 py-1 rounded">
-                                        טרם מולא נוכחות
-                                      </span>
-                                    )}
-                                    <p className="font-semibold text-foreground">{slot.lesson.subject}</p>
-                                  </div>
+                                  {!hasAttendance && !isFutureDate && (
+                                    <span className="text-xs font-semibold text-red-500 bg-red-50 px-2 py-1 rounded inline-block">
+                                      טרם מולאה נוכחות
+                                    </span>
+                                  )}
+                                  <p className="font-semibold text-foreground">{slot.lesson.subject}</p>
                                   {slot.lesson.room && (
                                     <p className="text-sm text-primary">חדר: {slot.lesson.room}</p>
                                   )}
                                   <p className="text-sm text-muted-foreground">
                                     <Users className="inline-block h-4 w-4 ml-1" />
                                     {slot.lesson.students.length} תלמידים משובצים
-                                  </p>
-                                  <p className="text-xs text-muted-foreground">
-                                    לחיצה על השעה תציג את רשימת התלמידים המלאה.
                                   </p>
                                 </div>
                               ) : (
