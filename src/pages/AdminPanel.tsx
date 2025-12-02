@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Save, Calendar as CalendarIcon, Upload, Download, Pencil, Trash2 } from 'lucide-react';
+import { ArrowRight, Save, Calendar as CalendarIcon, Upload, Download, Pencil, Trash2, RotateCcw } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
@@ -228,6 +228,53 @@ export default function AdminPanel() {
       setShowSuccessDialog(true);
     }
   });
+
+  const resetDayChangesMutation = useMutation({
+    mutationFn: async () => {
+      if (selectedStudents.length === 0) {
+        throw new Error('יש לבחור לפחות תלמיד אחד');
+      }
+
+      const datesToReset = editMode === 'daily' ? [editDate] : rangeDates;
+      
+      if (datesToReset.length === 0) {
+        throw new Error('יש לבחור לפחות תאריך אחד');
+      }
+
+      // Delete overrides for selected students and dates
+      for (const student of selectedStudents) {
+        for (const date of datesToReset) {
+          const dateStr = formatDateForDB(date);
+          const { error } = await supabase
+            .from('schedule_overrides')
+            .delete()
+            .eq('student_id', student)
+            .eq('date', dateStr);
+          
+          if (error) throw error;
+        }
+      }
+    },
+    onSuccess: () => {
+      const datesToReset = editMode === 'daily' ? [editDate] : rangeDates;
+      setSuccessMessage({
+        title: 'האיפוס בוצע בהצלחה',
+        description: `השינויים עבור ${selectedStudents.length} תלמידים ב-${datesToReset.length} ימים אופסו למערכת הבסיס`
+      });
+      setShowSuccessDialog(true);
+      queryClient.invalidateQueries({ queryKey: ['overrides'] });
+      queryClient.invalidateQueries({ queryKey: ['scheduleData'] });
+    },
+    onError: (error: Error) => {
+      console.error('שגיאה באיפוס', error);
+      setSuccessMessage({
+        title: 'שגיאה באיפוס השינויים',
+        description: error.message || 'נסה שוב'
+      });
+      setShowSuccessDialog(true);
+    }
+  });
+
   const savePermanentChangeMutation = useMutation({
     mutationFn: async () => {
       if (!PERMANENT_PASSWORD) {
@@ -653,18 +700,33 @@ export default function AdminPanel() {
                       השינויים יחולו רק על התאריכים שנבחרו ויישארו זמינים להיסטוריה.
                     </p>
                   </div>
-                  <Button
-                    onClick={() => saveChangesMutation.mutate()}
-                    disabled={
-                      selectedStudents.length === 0 ||
-                      (editMode === 'range' && (!hasValidLessonContent(rangeContent) || rangeDates.length === 0)) ||
-                      saveChangesMutation.isPending
-                    }
-                    className="w-full gradient-primary flex-row-reverse"
-                  >
-                    <Save className="mr-2 h-4 w-4" />
-                    {saveChangesMutation.isPending ? 'שומר...' : 'שמור שינויים'}
-                  </Button>
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <Button
+                      onClick={() => saveChangesMutation.mutate()}
+                      disabled={
+                        selectedStudents.length === 0 ||
+                        (editMode === 'range' && (!hasValidLessonContent(rangeContent) || rangeDates.length === 0)) ||
+                        saveChangesMutation.isPending
+                      }
+                      className="flex-1 gradient-primary flex-row-reverse"
+                    >
+                      <Save className="mr-2 h-4 w-4" />
+                      {saveChangesMutation.isPending ? 'שומר...' : 'שמור שינויים'}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={() => resetDayChangesMutation.mutate()}
+                      disabled={
+                        selectedStudents.length === 0 ||
+                        (editMode === 'range' && rangeDates.length === 0) ||
+                        resetDayChangesMutation.isPending
+                      }
+                      className="flex-1 flex-row-reverse"
+                    >
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      {resetDayChangesMutation.isPending ? 'מאפס...' : 'אפס שינויים ליום זה'}
+                    </Button>
+                  </div>
                 </Card>
               </TabsContent>
 
