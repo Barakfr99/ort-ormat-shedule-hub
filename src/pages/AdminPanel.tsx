@@ -740,12 +740,19 @@ export default function AdminPanel() {
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-medium mb-2 text-foreground text-right">שם המורה (אופציונלי)</label>
-                      <Input
-                        value={permanentTeacher}
-                        onChange={e => setPermanentTeacher(e.target.value)}
-                        placeholder="לדוגמה: כהן אלון"
-                        className="text-right"
-                      />
+                      <Select value={permanentTeacher} onValueChange={value => setPermanentTeacher(value)}>
+                        <SelectTrigger className="text-right">
+                          <SelectValue placeholder="בחר מורה (אופציונלי)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="">ללא מורה</SelectItem>
+                          {teacherRows.map(teacher => (
+                            <SelectItem key={teacher.id} value={teacher.name}>
+                              {teacher.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-medium mb-2 text-foreground text-right">חדר (אופציונלי)</label>
