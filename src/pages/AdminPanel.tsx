@@ -13,7 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, AlertDialogAction } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle, AlertDialogAction, AlertDialogCancel, AlertDialogFooter } from '@/components/ui/alert-dialog';
 
 import { useScheduleData } from '@/hooks/useScheduleData';
 import { formatDate, formatDateForDB } from '@/lib/excelParser';
@@ -111,6 +111,7 @@ export default function AdminPanel() {
     }));
   };
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [showResetConfirmDialog, setShowResetConfirmDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState({
     title: '',
     description: ''
@@ -700,33 +701,31 @@ export default function AdminPanel() {
                       השינויים יחולו רק על התאריכים שנבחרו ויישארו זמינים להיסטוריה.
                     </p>
                   </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Button
-                      onClick={() => saveChangesMutation.mutate()}
-                      disabled={
-                        selectedStudents.length === 0 ||
-                        (editMode === 'range' && (!hasValidLessonContent(rangeContent) || rangeDates.length === 0)) ||
-                        saveChangesMutation.isPending
-                      }
-                      className="flex-1 gradient-primary flex-row-reverse"
-                    >
-                      <Save className="mr-2 h-4 w-4" />
-                      {saveChangesMutation.isPending ? 'שומר...' : 'שמור שינויים'}
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      onClick={() => resetDayChangesMutation.mutate()}
-                      disabled={
-                        selectedStudents.length === 0 ||
-                        (editMode === 'range' && rangeDates.length === 0) ||
-                        resetDayChangesMutation.isPending
-                      }
-                      className="flex-1 flex-row-reverse"
-                    >
-                      <RotateCcw className="mr-2 h-4 w-4" />
-                      {resetDayChangesMutation.isPending ? 'מאפס...' : 'אפס שינויים ליום זה'}
-                    </Button>
-                  </div>
+                  <Button
+                    onClick={() => saveChangesMutation.mutate()}
+                    disabled={
+                      selectedStudents.length === 0 ||
+                      (editMode === 'range' && (!hasValidLessonContent(rangeContent) || rangeDates.length === 0)) ||
+                      saveChangesMutation.isPending
+                    }
+                    className="w-full gradient-primary flex-row-reverse"
+                  >
+                    <Save className="mr-2 h-4 w-4" />
+                    {saveChangesMutation.isPending ? 'שומר...' : 'שמור שינויים'}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => setShowResetConfirmDialog(true)}
+                    disabled={
+                      selectedStudents.length === 0 ||
+                      (editMode === 'range' && rangeDates.length === 0) ||
+                      resetDayChangesMutation.isPending
+                    }
+                    className="w-full flex-row-reverse"
+                  >
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    {resetDayChangesMutation.isPending ? 'מאפס...' : 'אפס שינויים ליום זה'}
+                  </Button>
                 </Card>
               </TabsContent>
 
@@ -992,6 +991,31 @@ export default function AdminPanel() {
             <AlertDialogAction onClick={() => setShowSuccessDialog(false)} className="w-full mt-6 gradient-primary">
               סגור
             </AlertDialogAction>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <AlertDialog open={showResetConfirmDialog} onOpenChange={setShowResetConfirmDialog}>
+          <AlertDialogContent className="max-w-md" dir="rtl">
+            <AlertDialogTitle className="text-xl font-bold text-center text-foreground">
+              האם אתה בטוח?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center text-muted-foreground mt-2">
+              פעולה זו תמחק את כל השינויים לתאריכים הנבחרים עבור {selectedStudents.length} תלמידים ותחזיר אותם למערכת הבסיס.
+            </AlertDialogDescription>
+            <AlertDialogFooter className="flex-row-reverse gap-2 mt-4">
+              <AlertDialogAction 
+                onClick={() => {
+                  setShowResetConfirmDialog(false);
+                  resetDayChangesMutation.mutate();
+                }} 
+                className="bg-destructive hover:bg-destructive/90"
+              >
+                כן, אפס שינויים
+              </AlertDialogAction>
+              <AlertDialogCancel onClick={() => setShowResetConfirmDialog(false)}>
+                ביטול
+              </AlertDialogCancel>
+            </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
       </div>;
