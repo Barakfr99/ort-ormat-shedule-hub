@@ -695,22 +695,7 @@ export default function AdminPanel() {
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 text-foreground text-right">יום בשבוע</label>
-                      <Select value={permanentDay} onValueChange={value => setPermanentDay(value)}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="בחר יום" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {DAY_OPTIONS.map(day => (
-                            <SelectItem key={day} value={day}>
-                              {day}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                  <div className="grid gap-4 md:grid-cols-2" dir="rtl">
                     <div>
                       <label className="block text-sm font-medium mb-2 text-foreground text-right">שעה</label>
                       <Select value={String(permanentHour)} onValueChange={value => setPermanentHour(Number(value))}>
@@ -721,6 +706,21 @@ export default function AdminPanel() {
                           {HOUR_OPTIONS.map(hour => (
                             <SelectItem key={hour} value={String(hour)}>
                               שעה {hour}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-foreground text-right">יום בשבוע</label>
+                      <Select value={permanentDay} onValueChange={value => setPermanentDay(value)}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="בחר יום" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {DAY_OPTIONS.map(day => (
+                            <SelectItem key={day} value={day}>
+                              {day}
                             </SelectItem>
                           ))}
                         </SelectContent>
